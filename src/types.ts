@@ -1,0 +1,77 @@
+export type View = 'home' | 'product' | 'studio';
+export type Side = 'front' | 'back';
+export type ShirtColor = 'white' | 'black' | 'beige' | 'purple';
+export type ShirtSize = 'S' | 'M' | 'L' | 'XL';
+export type ItemKind = 'text' | 'symbol' | 'image';
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  colors: ShirtColor[];
+  artwork: 'orbit' | 'anatolia' | 'signal' | 'typography';
+}
+
+export interface DesignDocument {
+  version: string;
+  objects: unknown[];
+}
+
+export interface DesignSides {
+  front: DesignDocument;
+  back: DesignDocument;
+}
+
+export interface ObjectMeasurement {
+  id: string;
+  side: Side;
+  kind: ItemKind;
+  label: string;
+  xCm: number;
+  yCm: number;
+  widthCm: number;
+  heightCm: number;
+  angle: number;
+  detail: string;
+  vector: boolean;
+  sourcePixels?: { width: number; height: number };
+  estimatedPpi?: number;
+  quality?: 'suitable' | 'warning' | 'risk';
+}
+
+export interface OrderOptions {
+  color: ShirtColor;
+  size: ShirtSize;
+  quantity: number;
+}
+
+export interface PriceBreakdown {
+  baseUnit: number;
+  frontUnit: number;
+  backUnit: number;
+  subtotal: number;
+  discount: number;
+  total: number;
+}
+
+export interface PreviewImages {
+  front: string;
+  back: string;
+}
+
+export interface MockupPrintArea {
+  leftPercent: number;
+  topPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+}
+
+export interface SavedDraft {
+  schemaVersion: 1;
+  documents: DesignSides;
+  options: OrderOptions;
+  activeSide: Side;
+  previews?: PreviewImages;
+  updatedAt: string;
+}

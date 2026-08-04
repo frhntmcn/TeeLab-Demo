@@ -1,0 +1,69 @@
+# TeeLab Demo
+
+Türkiye odaklı dijital baskı markası için hazırlanmış, local çalışan React tabanlı tişört e-ticaret ve tasarım stüdyosu demosu.
+
+## Çalıştırma
+
+Gereksinim: Node.js 18 veya üzeri.
+
+```bash
+npm install
+npm run dev
+```
+
+Tarayıcıda `http://127.0.0.1:5173` adresini açın.
+
+Üretim derlemesi:
+
+```bash
+npm run lint
+npm run build
+npm run preview
+```
+
+## Özellikler
+
+- Responsive ana sayfa, dört ürünlü katalog ve ürün detay akışı
+- Fabric.js ile ön/arka yüz için ayrı tasarım alanları
+- Metin, altı hazır SVG sembol ve yerel PNG/JPG/SVG yükleme
+- Sürükleme, ölçekleme, döndürme, katman sırası ve silme
+- 30 × 40 cm baskı alanı ve merkez referanslı santimetre yerleşim modeli
+- Raster görseller için seçili fiziksel baskı boyutundan hesaplanan tahmini PPI
+- Görünür fiyat formülü ve adet indirimi simülasyonu
+- Sipariş özeti, mockup önizlemeleri, üretim tablosu ve state'ten türetilen JSON paketi
+- İmalathane e-postası ve demo dosya indirme simülasyonu
+- Ön/arka tasarım, ürün seçenekleri ve önizlemeler için `localStorage` tabanlı otomatik taslak kaydı
+- Onaylı “Taslağı temizle” akışı
+
+## Fotogerçekçi mockup sistemi
+
+Customizer, sipariş özeti, e-posta önizlemesi ve ürün sunumları üç katmanlı bir mockup yapısı kullanır:
+
+1. Fotogerçekçi tişört taban görseli
+2. Fabric.js tarafından üretilen şeffaf tasarım/baskı katmanı
+3. Kontrollü düşük opaklıklı ışık ve kumaş dokusu katmanı
+
+Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tanımlıdır ve Fabric canvas'ın tamamını fiziksel 30 × 40 cm alana eşler. Mockup yerleşimi yalnızca sunumu etkiler; üretim koordinatlarını değiştirmez. Kumaşın fiziksel deformasyonu simüle edilmez.
+
+### Mockup varlıkları ve kullanım notu
+
+`src/assets/mockups/` altındaki sekiz WebP varlığı (beyaz, siyah, bej ve mor; ön ve arka), OpenAI ImageGen ile yalnızca bu TeeLab demosu için özgün olarak üretildi. Harici hotlink, üçüncü taraf marka, logo veya telifli tasarım kullanılmadı. Kullanım, kullanıcı ile OpenAI arasındaki geçerli hizmet koşullarına tabidir.
+
+## Baskı koordinat modeli
+
+- Baskı alanı: 30 × 40 cm
+- X/Y referansı: baskı alanının sol üst köşesi
+- Nesne referansı: nesnenin merkezi
+- Genişlik/yükseklik: nesnenin döndürülmemiş, ölçeklenmiş fiziksel boyutu
+- Dönüş: saat yönünde derece
+- Döndürülmüş nesnenin sınır kontrolü: ekrandaki eksen hizalı dış sınırı baskı alanı içinde tutulur
+- Raster kalite eşikleri: 300 PPI ve üzeri uygun, 200–299 PPI uyarı, 200 PPI altı risk
+- SVG kaynakları vektör olarak işaretlenir
+
+## Taslak kaydı
+
+Ön/arka Fabric dokümanları, ürün rengi, beden, adet, aktif yüz ve mockup önizlemeleri tarayıcının `localStorage` alanında saklanır. Sayfa yenilendiğinde taslak geri yüklenir. Depolama kullanılamazsa uygulama çalışmaya devam eder. “Taslağı temizle” yalnızca bu tarayıcıdaki TeeLab demo taslağını siler.
+
+## Demo sınırları
+
+Bu proje bir demo/MVP'dir. Gerçek ödeme, kullanıcı hesabı, veritabanı, e-posta gönderimi veya üretim entegrasyonu içermez. Yüklenen görseller yalnızca kullanıcının tarayıcısında işlenir; herhangi bir sunucuya gönderilmez. Mockup görselleri, üretim tablosu ve indirilen demo dosyaları gerçek baskı çıktısı değildir. PPI değeri kaynak piksel ölçüsü ile seçilen fiziksel boyuttan türetilen tahmini bir kontroldür; profesyonel prepress onayı yerine geçmez.
