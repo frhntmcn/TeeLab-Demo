@@ -1,4 +1,3 @@
-export type View = 'home' | 'product' | 'studio';
 export type Side = 'front' | 'back';
 export type ShirtColor = 'white' | 'black' | 'beige' | 'purple';
 export type ShirtSize = 'S' | 'M' | 'L' | 'XL';
@@ -11,6 +10,17 @@ export interface Product {
   price: number;
   colors: ShirtColor[];
   artwork: 'orbit' | 'anatolia' | 'signal' | 'typography';
+}
+
+export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  color: ShirtColor;
+  size: ShirtSize;
+  quantity: number;
+  unitPrice: number;
+  artwork: Product['artwork'];
 }
 
 export interface DesignDocument {

@@ -1,18 +1,18 @@
 import { ShoppingBag } from 'lucide-react';
-import type { View } from '../types';
+import { Link, NavLink } from 'react-router-dom';
 import { Logo } from './Logo';
 
-export function Header({ navigate, cartCount }: { navigate: (view: View) => void; cartCount: number }) {
+export function Header({ cartCount }: { cartCount: number }) {
   return (
     <header className="site-header">
-      <button className="logo-button" onClick={() => navigate('home')}><Logo /></button>
+      <Link className="logo-button" to="/" aria-label="TeeLab ana sayfa"><Logo /></Link>
       <nav aria-label="Ana menü">
-        <button onClick={() => navigate('home')}>Koleksiyon</button>
-        <button onClick={() => navigate('studio')}>Kendin Tasarla</button>
+        <NavLink to="/#koleksiyon">Koleksiyon</NavLink>
+        <NavLink to="/studio">Kendin Tasarla</NavLink>
       </nav>
-      <button className="cart-button" aria-label={`Sepet, ${cartCount} ürün`}>
+      <Link className="cart-button" to="/sepet" aria-label={`Sepet, ${cartCount} ürün`}>
         <ShoppingBag size={20} /><span>{cartCount}</span>
-      </button>
+      </Link>
     </header>
   );
 }

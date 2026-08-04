@@ -4,16 +4,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite.config.ts --configLoader runner --host 127.0.0.1",
+    "dev": "vite --config vite.config.ts --configLoader runner --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.app.json && vite --config vite.config.ts --configLoader runner build",
     "lint": "eslint .",
-    "preview": "vite --config vite.config.ts --configLoader runner preview --host 127.0.0.1"
+    "preview": "vite --config vite.config.ts --configLoader runner preview --host 0.0.0.0"
   },
   "dependencies": {
     "fabric": "^7.4.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.9.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

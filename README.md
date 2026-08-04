@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Tarayıcıda `http://127.0.0.1:5173` adresini açın.
+Bu bilgisayarda `http://127.0.0.1:5173` adresini açın. Aynı yerel ağdaki başka bir cihazdan bilgisayarın güncel LAN IP adresi ve `5173` portu ile erişilebilir: `http://<LAN-IP>:5173`. Windows'ta güncel adres `ipconfig` komutundaki etkin ağ bağdaştırıcısının “IPv4 Address” satırından görülebilir.
 
 Üretim derlemesi:
 
@@ -24,6 +24,11 @@ npm run preview
 ## Özellikler
 
 - Responsive ana sayfa, dört ürünlü katalog ve ürün detay akışı
+- React Router tabanlı gerçek URL'ler: `/`, `/koleksiyon/:Türkçe-slug`, `/studio`, `/sepet`
+- Kalıcı demo sepeti, teslimat formu ve açıkça simüle edilen sipariş tamamlama adımı
+- Route bazlı lazy loading; Fabric.js yalnızca stüdyo açıldığında yüklenir
+- Favicon, Open Graph/Twitter kartları ve ürün sayfalarında state'ten üretilen Product JSON-LD
+- Tutarlı SVG koleksiyon baskılarıyla ön ve arka ürün sunumu
 - Fabric.js ile ön/arka yüz için ayrı tasarım alanları
 - Metin, altı hazır SVG sembol ve yerel PNG/JPG/SVG yükleme
 - Sürükleme, ölçekleme, döndürme, katman sırası ve silme
@@ -66,4 +71,4 @@ Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tan�
 
 ## Demo sınırları
 
-Bu proje bir demo/MVP'dir. Gerçek ödeme, kullanıcı hesabı, veritabanı, e-posta gönderimi veya üretim entegrasyonu içermez. Yüklenen görseller yalnızca kullanıcının tarayıcısında işlenir; herhangi bir sunucuya gönderilmez. Mockup görselleri, üretim tablosu ve indirilen demo dosyaları gerçek baskı çıktısı değildir. PPI değeri kaynak piksel ölçüsü ile seçilen fiziksel boyuttan türetilen tahmini bir kontroldür; profesyonel prepress onayı yerine geçmez.
+Bu proje bir demo/MVP'dir. Sepet ve teslimat formu yalnızca tarayıcı içi deneyimdir; gerçek ödeme, kullanıcı hesabı, veritabanı, WhatsApp, e-posta gönderimi veya üretim entegrasyonu içermez. Yüklenen görseller yalnızca kullanıcının tarayıcısında işlenir; herhangi bir sunucuya gönderilmez. Mockup görselleri, üretim tablosu ve indirilen demo dosyaları gerçek baskı çıktısı değildir. PPI değeri kaynak piksel ölçüsü ile seçilen fiziksel boyuttan türetilen tahmini bir kontroldür; profesyonel prepress onayı yerine geçmez.

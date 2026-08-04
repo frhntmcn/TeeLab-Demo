@@ -114,7 +114,10 @@ export function Studio({ onBack }: { onBack: () => void }) {
             )}
           </section>
 
-          <section className="tool-section"><h3><WandSparkles size={17} /> Hazır semboller</h3><div className="symbol-grid">{symbols.map((symbol) => <button key={symbol.name} onClick={() => editorRef.current?.addSymbol(symbol.svg, symbol.name)} title={`${symbol.name} ekle`}><b>{symbol.icon}</b><small>{symbol.name}</small></button>)}</div></section>
+          <section className="tool-section"><h3><WandSparkles size={17} /> Hazır semboller</h3><div className="symbol-grid">{symbols.map((symbol) => {
+            const isActive = measurements[side].some((item) => item.kind === 'symbol' && item.label === symbol.name);
+            return <button key={symbol.name} className={isActive ? 'is-active' : ''} aria-pressed={isActive} onClick={() => editorRef.current?.toggleSymbol(symbol.svg, symbol.name)} title={isActive ? `${symbol.name} sembolünü kaldır` : `${symbol.name} sembolünü ekle`}><b>{symbol.icon}</b><small>{symbol.name}</small></button>;
+          })}</div></section>
           <section className="tool-section"><h3><ImagePlus size={17} /> Kendi görselin</h3><label className="upload-zone"><Upload /><b>Görsel yükle</b><span>PNG, JPG veya SVG · maks. 8 MB</span><input type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" onChange={(event) => upload(event.target.files?.[0])} /></label>{notice && <div className="quality-note"><Info size={15} /> {notice}</div>}</section>
           <section className="tool-section object-tools"><h3>Nesne düzenleme</h3><div><button disabled={!selection} onClick={() => editorRef.current?.bringForward()}><ArrowUpToLine /> Öne al</button><button disabled={!selection} onClick={() => editorRef.current?.sendBackward()}><ArrowDownToLine /> Arkaya al</button><button disabled={!selection} onClick={() => editorRef.current?.removeSelected()} className="danger"><Trash2 /> Sil</button></div></section>
         </aside>

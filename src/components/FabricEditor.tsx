@@ -29,7 +29,7 @@ export interface SelectionInfo {
 
 export interface EditorHandle {
   addText: () => void;
-  addSymbol: (svg: string, label: string) => Promise<void>;
+  toggleSymbol: (svg: string, label: string) => Promise<'added' | 'removed' | 'busy'>;
   addImage: (file: File) => Promise<{ lowQuality: boolean; message: string }>;
   updateSelected: (updates: Record<string, unknown>) => void;
   removeSelected: () => void;
@@ -89,6 +89,7 @@ function keepInside(canvas: Canvas, object: MetaObject) {
 export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEditor({ side, document, onChange, onSelection }, ref) {
   const elementRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<Canvas | null>(null);
+  const pendingSymbolsRef = useRef(new Set<string>());
   const readyRef = useRef(false);
   const initialDocumentRef = useRef(document);
   const callbacksRef = useRef({ onChange, onSelection });
@@ -149,11 +150,34 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       const object = new Textbox('Fikrini giy.', { width: 220, fontSize: 34, fontFamily: 'Arial', fontWeight: 700, fill: '#0f172a', textAlign: 'center' }) as MetaObject;
       Object.assign(object, { itemId: uid(), itemKind: 'text', itemLabel: 'Metin', itemDetail: 'Arial / 34 px', isVector: true }); addObject(object);
     },
-    addSymbol: async (svg, label) => {
-      const parsed = await loadSVGFromString(svg);
-      const validObjects = parsed.objects.filter((object): object is FabricObject => object !== null);
-      const group = util.groupSVGElements(validObjects, parsed.options) as Group & MetaObject;
-      group.scaleToWidth(150); Object.assign(group, { itemId: uid(), itemKind: 'symbol', itemLabel: label, itemDetail: `${label} / SVG`, isVector: true }); addObject(group);
+    toggleSymbol: async (svg, label) => {
+      const canvas = canvasRef.current;
+      if (!canvas || pendingSymbolsRef.current.has(label)) return 'busy';
+
+      const existing = (canvas.getObjects() as MetaObject[]).filter((object) => object.itemKind === 'symbol' && object.itemLabel === label);
+      if (existing.length) {
+        const activeObject = canvas.getActiveObject();
+        canvas.remove(...existing);
+        if (activeObject && existing.includes(activeObject as MetaObject)) {
+          canvas.discardActiveObject();
+          callbacksRef.current.onSelection(null);
+        }
+        canvas.requestRenderAll();
+        return 'removed';
+      }
+
+      pendingSymbolsRef.current.add(label);
+      try {
+        const parsed = await loadSVGFromString(svg);
+        const validObjects = parsed.objects.filter((object): object is FabricObject => object !== null);
+        const group = util.groupSVGElements(validObjects, parsed.options) as Group & MetaObject;
+        group.scaleToWidth(150);
+        Object.assign(group, { itemId: uid(), itemKind: 'symbol', itemLabel: label, itemDetail: `${label} / SVG`, isVector: true });
+        addObject(group);
+        return 'added';
+      } finally {
+        pendingSymbolsRef.current.delete(label);
+      }
     },
     addImage: async (file) => {
       const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });

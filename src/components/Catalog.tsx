@@ -1,5 +1,6 @@
-import { ArrowRight, Check, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { colorHex, colorNames, products } from '../data/products';
+import { formatTRY } from '../lib/pricing';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -17,12 +18,9 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           </div>
           <div className="hero-trust"><span><Check size={15} /> Premium kumaş</span><span><Check size={15} /> Canlı baskı</span><span><Check size={15} /> Hızlı üretim</span></div>
         </div>
-        <div className="hero-visual">
-          <div className="hero-orb" />
-          <div className="hero-shirt hero-shirt--back"><ShirtVisual color="beige" side="back" artwork="anatolia" /></div>
-          <div className="hero-shirt hero-shirt--front"><ShirtVisual color="white" artwork="signal" /></div>
-          <span className="floating-note note-one">30 × 40 cm<br /><b>baskı alanı</b></span>
-          <span className="floating-note note-two">Sen tasarla.<br /><b>Biz basalım.</b></span>
+        <div className="hero-visual hero-visual--editorial">
+          <div className="hero-product-frame"><ShirtVisual color="white" artwork="signal" label="Mor Sinyal koleksiyon tişörtü" /></div>
+          <div className="hero-product-caption"><span>01 / MOR SİNYAL</span><b>Yeni sezon seçkisi</b><a href="#koleksiyon" aria-label="Koleksiyona geç"><ArrowDown /></a></div>
         </div>
       </section>
 
@@ -37,11 +35,11 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
               <div className="product-image">
                 <span className="product-tag">YENİ</span>
                 <ShirtVisual color={product.colors[0]} side="front" artwork={product.artwork} label={`${product.name} ön görünümü`} />
-                <div className="product-back-mini"><span>ARKA</span><ShirtVisual color={product.colors[0]} side="back" label={`${product.name} arka görünümü`} /></div>
+                <div className="product-back-mini"><span>ARKA</span><ShirtVisual color={product.colors[0]} side="back" artwork={product.artwork} label={`${product.name} arka görünümü`} /></div>
               </div>
               <div className="product-info">
                 <div><h3>{product.name}</h3><p>{product.description}</p></div>
-                <strong>{product.price.toLocaleString('tr-TR')} ₺</strong>
+                <strong>{formatTRY(product.price)}</strong>
               </div>
               <div className="product-footer">
                 <div className="swatches" aria-label="Renk seçenekleri">{product.colors.map((color) => <span key={color} title={colorNames[color]} style={{ background: colorHex[color] }} />)}</div>
