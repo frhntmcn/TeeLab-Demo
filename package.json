@@ -7,7 +7,8 @@
     "dev": "vite --config vite.config.ts --configLoader runner --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.app.json && vite --config vite.config.ts --configLoader runner build",
     "lint": "eslint .",
-    "preview": "vite --config vite.config.ts --configLoader runner preview --host 0.0.0.0"
+    "preview": "vite --config vite.config.ts --configLoader runner preview --host 0.0.0.0",
+    "test": "vitest run"
   },
   "dependencies": {
     "fabric": "^7.4.0",
@@ -27,6 +28,7 @@
     "globals": "^15.14.0",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vitest": "^4.1.10"
   }
 }

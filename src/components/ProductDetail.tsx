@@ -12,7 +12,7 @@ export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product
   const [viewSide, setViewSide] = useState<Side>('front');
   const [added, setAdded] = useState(false);
   const add = () => {
-    onAdd({ id: `${product.id}-${color}-${size}-${Date.now()}`, productId: product.id, name: product.name, color, size, quantity, unitPrice: product.price, artwork: product.artwork });
+    onAdd({ id: `${product.id}-${color}-${size}-${Date.now()}`, designHash: `catalog:${product.artwork}`, productId: product.id, name: product.name, color, size, quantity, unitPrice: product.price, artwork: product.artwork });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2500);
   };

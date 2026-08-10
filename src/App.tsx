@@ -7,6 +7,7 @@ import { Logo } from './components/Logo';
 import { ProductDetail } from './components/ProductDetail';
 import { products } from './data/products';
 import type { CartItem } from './types';
+import { mergeCartItem } from './lib/cart';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
 const CART_KEY = 'teelab-demo-cart-v1';
@@ -14,7 +15,12 @@ const CART_KEY = 'teelab-demo-cart-v1';
 function readCart(): CartItem[] {
   try {
     const value = window.localStorage.getItem(CART_KEY);
-    return value ? JSON.parse(value) as CartItem[] : [];
+    if (!value) return [];
+    const items = JSON.parse(value) as Partial<CartItem>[];
+    return items.filter((item) => item.id && item.productId && item.color && item.size).map((item) => ({
+      ...item,
+      designHash: item.designHash ?? `catalog:${item.artwork ?? 'legacy'}`,
+    } as CartItem));
   } catch {
     return [];
   }
@@ -73,11 +79,7 @@ export default function App() {
   }, [cart]);
 
   const addToCart = (next: CartItem) => {
-    setCart((current) => {
-      const match = current.find((item) => item.productId === next.productId && item.color === next.color && item.size === next.size);
-      if (!match) return [...current, next];
-      return current.map((item) => item.id === match.id ? { ...item, quantity: item.quantity + next.quantity } : item);
-    });
+    setCart((current) => mergeCartItem(current, next));
   };
 
   const updateQuantity = (id: string, quantity: number) => setCart((current) => current.map((item) => item.id === id ? { ...item, quantity } : item).filter((item) => item.quantity > 0));
@@ -89,7 +91,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Catalog onCustomize={() => navigate('/studio')} onProduct={(product) => navigate(`/koleksiyon/${product.id}`)} />} />
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
-        <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} /></Suspense>} />
+        <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
         <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onContinue={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

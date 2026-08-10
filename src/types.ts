@@ -14,6 +14,7 @@ export interface Product {
 
 export interface CartItem {
   id: string;
+  designHash: string;
   productId: string;
   name: string;
   color: ShirtColor;
@@ -21,6 +22,8 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   artwork: Product['artwork'];
+  designPreview?: string;
+  isCustom?: boolean;
 }
 
 export interface DesignDocument {
@@ -78,7 +81,7 @@ export interface MockupPrintArea {
 }
 
 export interface SavedDraft {
-  schemaVersion: 1;
+  schemaVersion: 2;
   documents: DesignSides;
   options: OrderOptions;
   activeSide: Side;

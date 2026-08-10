@@ -18,6 +18,7 @@ Bu bilgisayarda `http://127.0.0.1:5173` adresini açın. Aynı yerel ağdaki ba�
 ```bash
 npm run lint
 npm run build
+npm test
 npm run preview
 ```
 
@@ -28,7 +29,10 @@ npm run preview
 - Kalıcı demo sepeti, teslimat formu ve açıkça simüle edilen sipariş tamamlama adımı
 - Route bazlı lazy loading; Fabric.js yalnızca stüdyo açıldığında yüklenir
 - Favicon, Open Graph/Twitter kartları ve ürün sayfalarında state'ten üretilen Product JSON-LD
-- Tutarlı SVG koleksiyon baskılarıyla ön ve arka ürün sunumu
+- Özgün, yüksek çözünürlüklü raster baskı görselleriyle ön ve arka ürün sunumu
+- Dört koleksiyon için ImageGen ile üretilmiş, web-optimize yüksek çözünürlüklü raster baskı artwork'leri
+- Sakin editorial ana sayfa, ön/arka eşit ürün sunumu ve fotoğraf odaklı 2×2 koleksiyon düzeni
+- Customizer'da `Ürün → Tasarım → Önizleme` adımları; aynı anda yalnızca ilgili görev paneli
 - Fabric.js ile ön/arka yüz için ayrı tasarım alanları
 - Metin, altı hazır SVG sembol ve yerel PNG/JPG/SVG yükleme
 - Sürükleme, ölçekleme, döndürme, katman sırası ve silme
@@ -54,6 +58,8 @@ Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tan�
 
 `src/assets/mockups/` altındaki sekiz WebP varlığı (beyaz, siyah, bej ve mor; ön ve arka), OpenAI ImageGen ile yalnızca bu TeeLab demosu için özgün olarak üretildi. Harici hotlink, üçüncü taraf marka, logo veya telifli tasarım kullanılmadı. Kullanım, kullanıcı ile OpenAI arasındaki geçerli hizmet koşullarına tabidir.
 
+`src/assets/artworks/` altındaki Gece Yörüngesi, Anadolu Form, Mor Sinyal ve İyi Fikir WebP baskı artwork'leri de OpenAI ImageGen ile bu demo için özgün olarak üretildi. Bunlar gerçek üretim/prepress dosyası değil, marka ve mockup sunumu için optimize edilmiş demo görselleridir.
+
 ## Baskı koordinat modeli
 
 - Baskı alanı: 30 × 40 cm
@@ -68,6 +74,8 @@ Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tan�
 ## Taslak kaydı
 
 Ön/arka Fabric dokümanları, ürün rengi, beden, adet, aktif yüz ve mockup önizlemeleri tarayıcının `localStorage` alanında saklanır. Sayfa yenilendiğinde taslak geri yüklenir. Depolama kullanılamazsa uygulama çalışmaya devam eder. “Taslağı temizle” yalnızca bu tarayıcıdaki TeeLab demo taslağını siler.
+
+Taslak kayıtları şema sürümü 2 ile saklanır; v1 kayıtları yükleme sırasında v2 yapısına taşınır. Sepet satırları `productId + renk + beden + designHash` anahtarıyla birleştirilir; farklı özel tasarımlar ayrı satırda kalır. `npm test` sepet kimliği, fiyatlandırma ve tasarım hash davranışlarını doğrular.
 
 ## Demo sınırları
 

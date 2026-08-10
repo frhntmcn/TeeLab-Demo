@@ -35,8 +35,8 @@ export function CartPage({ items, onUpdate, onContinue }: Props) {
         <div className="cart-layout">
           <section className="cart-items" aria-label="Sepet ürünleri">
             {items.map((item) => <article className="cart-line" key={item.id}>
-              <div className="cart-thumb"><ShirtVisual color={item.color} artwork={item.artwork} label={`${item.name} ön görünümü`} /></div>
-              <div className="cart-line-copy"><span className="eyebrow">TEELAB KOLEKSİYON</span><h2>{item.name}</h2><p>{colorNames[item.color]} · {item.size} beden</p><strong>{formatTRY(item.unitPrice)}</strong></div>
+              <div className="cart-thumb">{item.designPreview ? <img src={item.designPreview} alt={`${item.name} tasarım önizlemesi`} /> : <ShirtVisual color={item.color} artwork={item.artwork} label={`${item.name} ön görünümü`} />}</div>
+              <div className="cart-line-copy"><span className="eyebrow">{item.isCustom ? 'TEELAB STÜDYO' : 'TEELAB KOLEKSİYON'}</span><h2>{item.name}</h2><p>{colorNames[item.color]} · {item.size} beden · {item.isCustom ? 'Özel tasarım' : 'Hazır tasarım'}</p><strong>{formatTRY(item.unitPrice)}</strong></div>
               <div className="cart-quantity" aria-label={`${item.name} adedi`}><button onClick={() => onUpdate(item.id, item.quantity - 1)} aria-label="Adedi azalt"><Minus /></button><b>{item.quantity}</b><button onClick={() => onUpdate(item.id, item.quantity + 1)} aria-label="Adedi artır"><Plus /></button></div>
               <button className="cart-remove" onClick={() => onUpdate(item.id, 0)} aria-label={`${item.name} ürününü sepetten kaldır`}><Trash2 /></button>
             </article>)}

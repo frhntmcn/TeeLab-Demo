@@ -4,7 +4,7 @@ import type { SavedDraft } from '../types';
 const STORAGE_KEY = 'teelab.demo.draft.v1';
 
 export const createEmptyDraft = (): SavedDraft => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   documents: { front: emptyDesign(), back: emptyDesign() },
   options: { color: 'white', size: 'M', quantity: 1 },
   activeSide: 'front',
@@ -17,8 +17,8 @@ export function loadDraft(): SavedDraft {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return createEmptyDraft();
     const value = JSON.parse(raw) as Partial<SavedDraft>;
-    if (value.schemaVersion !== 1 || !value.documents?.front || !value.documents?.back || !value.options) return createEmptyDraft();
-    return { ...createEmptyDraft(), ...value } as SavedDraft;
+    if (![1, 2].includes(value.schemaVersion ?? 0) || !value.documents?.front || !value.documents?.back || !value.options) return createEmptyDraft();
+    return { ...createEmptyDraft(), ...value, schemaVersion: 2 } as SavedDraft;
   } catch {
     return createEmptyDraft();
   }

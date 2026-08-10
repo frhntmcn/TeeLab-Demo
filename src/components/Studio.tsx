@@ -1,23 +1,29 @@
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowDownToLine, ArrowLeft, ArrowUpToLine,
-  ImagePlus, Info, Minus, Plus, RotateCcw, Save, Trash2, Type, Upload, WandSparkles,
+  AlignCenter, AlignLeft, AlignRight, ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpToLine,
+  Eye, ImagePlus, Info, Minus, Palette, Plus, RotateCcw, Save, Shirt, Trash2, Type, Upload, WandSparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { colorHex, colorNames, emptyDesign } from '../data/products';
 import { symbols } from '../data/symbols';
 import { clearDraft, createEmptyDraft, loadDraft, saveDraft } from '../lib/draftStorage';
 import { calculatePrice, formatTRY } from '../lib/pricing';
-import type { DesignDocument, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtSize, Side } from '../types';
+import { designHash } from '../lib/designIdentity';
+import type { CartItem, DesignDocument, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtSize, Side } from '../types';
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
 import { EmailModal, SummaryModal } from './OrderModals';
 
+type StudioStep = 'product' | 'design' | 'preview';
+const steps: { id: StudioStep; label: string; icon: typeof Shirt }[] = [
+  { id: 'product', label: 'Ürün', icon: Shirt }, { id: 'design', label: 'Tasarım', icon: Palette }, { id: 'preview', label: 'Önizleme', icon: Eye },
+];
 const qualityLabel = { suitable: 'Baskıya uygun', warning: 'Çözünürlük uyarısı', risk: 'Kalite riski' } as const;
 
-export function Studio({ onBack }: { onBack: () => void }) {
+export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: CartItem) => void }) {
   const initialDraft = useRef(loadDraft());
   const editorRef = useRef<EditorHandle>(null);
   const skipNextSave = useRef(false);
+  const [step, setStep] = useState<StudioStep>('product');
   const [side, setSide] = useState<Side>(initialDraft.current.activeSide);
   const [documents, setDocuments] = useState<Record<Side, DesignDocument>>(initialDraft.current.documents);
   const [measurements, setMeasurements] = useState<Record<Side, ObjectMeasurement[]>>({ front: [], back: [] });
@@ -32,13 +38,30 @@ export function Studio({ onBack }: { onBack: () => void }) {
   const allMeasurements = [...measurements.front, ...measurements.back];
   const price = calculatePrice(options.quantity, measurements.front.length > 0, measurements.back.length > 0);
   const orderId = useMemo(() => `TL-${String(Math.floor(1000 + Math.random() * 9000))}`, []);
+  const addCustomDesignToCart = () => {
+    const hash = designHash(documents);
+    onAdd({
+      id: `custom-${hash}-${options.color}-${options.size}`,
+      designHash: hash,
+      productId: 'custom-design',
+      name: 'Kendin Tasarla',
+      color: options.color,
+      size: options.size,
+      quantity: options.quantity,
+      unitPrice: Math.round(price.total / options.quantity),
+      artwork: 'typography',
+      designPreview: previews.front || previews.back || undefined,
+      isCustom: true,
+    });
+    setNotice('Özel tasarım sepete eklendi.');
+  };
 
   useEffect(() => {
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSaveStatus('Kaydediliyor…');
     const timer = window.setTimeout(() => {
-      const saved = saveDraft({ schemaVersion: 1, documents, options, activeSide: side, previews, updatedAt: new Date().toISOString() });
-      setSaveStatus(saved ? 'Taslak tarayıcıya kaydedildi' : 'Yerel kayıt kullanılamıyor');
+      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, updatedAt: new Date().toISOString() });
+      setSaveStatus(saved ? 'Taslak kaydedildi' : 'Yerel kayıt kullanılamıyor');
     }, 400);
     return () => window.clearTimeout(timer);
   }, [documents, options, previews, side]);
@@ -48,115 +71,67 @@ export function Studio({ onBack }: { onBack: () => void }) {
     setMeasurements((current) => ({ ...current, [side]: items }));
     setPreviews((current) => ({ ...current, [side]: preview }));
   };
-
   const chooseSide = (next: Side) => { setSelection(null); setSide(next); };
-
   const upload = async (file?: File) => {
     if (!file) return;
-    if (!['image/png', 'image/jpeg', 'image/svg+xml'].includes(file.type)) { setNotice('Yalnızca PNG, JPG/JPEG veya SVG yükleyebilirsin.'); return; }
-    if (file.size > 8 * 1024 * 1024) { setNotice('Demo için görsel boyutu en fazla 8 MB olmalı.'); return; }
-    try {
-      const result = await editorRef.current?.addImage(file);
-      setNotice(result?.message ?? 'Görsel eklendi.');
-    } catch {
-      setNotice('Görsel okunamadı. Dosyayı kontrol edip tekrar dene.');
-    }
+    if (!['image/png', 'image/jpeg', 'image/svg+xml'].includes(file.type)) return setNotice('Yalnızca PNG, JPG/JPEG veya SVG yükleyebilirsin.');
+    if (file.size > 8 * 1024 * 1024) return setNotice('Demo için görsel boyutu en fazla 8 MB olmalı.');
+    try { const result = await editorRef.current?.addImage(file); setNotice(result?.message ?? 'Görsel eklendi.'); }
+    catch { setNotice('Görsel okunamadı. Dosyayı kontrol edip tekrar dene.'); }
   };
-
   const resetDraft = () => {
     if (!window.confirm('Bu tarayıcıdaki ön ve arka yüz taslağını kalıcı olarak temizlemek istiyor musun?')) return;
-    skipNextSave.current = true;
-    clearDraft();
-    const empty = createEmptyDraft();
-    setDocuments({ front: emptyDesign(), back: emptyDesign() });
-    setMeasurements({ front: [], back: [] });
-    setPreviews({ front: '', back: '' });
-    setOptions(empty.options);
-    setSide('front');
-    setSelection(null);
-    setNotice('Yerel demo taslağı temizlendi.');
-    setSaveStatus('Taslak temizlendi');
-    setDraftRevision((value) => value + 1);
+    skipNextSave.current = true; clearDraft(); const empty = createEmptyDraft();
+    setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setPreviews({ front: '', back: '' });
+    setOptions(empty.options); setSide('front'); setSelection(null); setNotice('Yerel demo taslağı temizlendi.'); setSaveStatus('Taslak temizlendi'); setDraftRevision((value) => value + 1);
   };
 
   return (
-    <main className="studio-page">
-      <div className="studio-topbar">
+    <main className="studio-page studio-page--steps">
+      <header className="studio-topbar studio-topbar--quiet">
         <button className="back-link" onClick={onBack}><ArrowLeft size={17} /> Mağazaya dön</button>
-        <div><b>TeeLab Stüdyo</b><span><Save size={11} /> {saveStatus} · tarayıcı içi demo</span></div>
-        <div className="studio-topbar-actions">
-          <button className="clear-draft-button" onClick={resetDraft}>Taslağı temizle</button>
-          <button className="button button--primary" onClick={() => setShowSummary(true)}>Tasarımı Tamamla</button>
-        </div>
-      </div>
+        <div><b>TeeLab Stüdyo</b><span><Save size={11} /> {saveStatus}</span></div>
+        <button className="clear-draft-button" onClick={resetDraft}>Taslağı temizle</button>
+      </header>
+      <nav className="studio-progress" aria-label="Tasarım adımları">
+        {steps.map((item, index) => { const Icon = item.icon; return <button key={item.id} className={step === item.id ? 'is-active' : ''} onClick={() => setStep(item.id)} aria-current={step === item.id ? 'step' : undefined}><span>0{index + 1}</span><Icon /> <b>{item.label}</b></button>; })}
+      </nav>
 
-      <div className="studio-layout">
-        <aside className="tools-panel">
-          <div className="panel-title"><span>01</span><div><b>Araçlar</b><small>Tasarımını oluştur</small></div></div>
-          <section className="tool-section">
-            <h3><Type size={17} /> Metin</h3>
-            <button className="tool-action" onClick={() => editorRef.current?.addText()}><Plus size={17} /> Örnek metin ekle</button>
-            {selection?.kind === 'text' && (
-              <div className="text-controls">
-                <label>Metin<textarea value={selection.text ?? ''} onChange={(event) => editorRef.current?.updateSelected({ text: event.target.value })} /></label>
-                <div className="two-cols">
-                  <label>Yazı tipi<select value={selection.fontFamily} onChange={(event) => editorRef.current?.updateSelected({ fontFamily: event.target.value })}><option value="Arial">Sans-serif</option><option value="Georgia">Serif</option><option value="Courier New">Monospace</option><option value="Impact">Display</option></select></label>
-                  <label>Punto<input type="number" min="12" max="120" value={selection.fontSize ?? 34} onChange={(event) => editorRef.current?.updateSelected({ fontSize: Number(event.target.value) })} /></label>
-                </div>
-                <div className="inline-controls">
-                  <label>Renk<input type="color" value={selection.fill ?? '#0f172a'} onChange={(event) => editorRef.current?.updateSelected({ fill: event.target.value })} /></label>
-                  <button className={selection.fontWeight === 700 ? 'is-active' : ''} onClick={() => editorRef.current?.updateSelected({ fontWeight: selection.fontWeight === 700 ? 400 : 700 })} aria-label="Kalın yazı">B</button>
-                  <button onClick={() => editorRef.current?.updateSelected({ textAlign: 'left' })} aria-label="Sola hizala"><AlignLeft /></button>
-                  <button onClick={() => editorRef.current?.updateSelected({ textAlign: 'center' })} aria-label="Ortala"><AlignCenter /></button>
-                  <button onClick={() => editorRef.current?.updateSelected({ textAlign: 'right' })} aria-label="Sağa hizala"><AlignRight /></button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="tool-section"><h3><WandSparkles size={17} /> Hazır semboller</h3><div className="symbol-grid">{symbols.map((symbol) => {
-            const isActive = measurements[side].some((item) => item.kind === 'symbol' && item.label === symbol.name);
-            return <button key={symbol.name} className={isActive ? 'is-active' : ''} aria-pressed={isActive} onClick={() => editorRef.current?.toggleSymbol(symbol.svg, symbol.name)} title={isActive ? `${symbol.name} sembolünü kaldır` : `${symbol.name} sembolünü ekle`}><b>{symbol.icon}</b><small>{symbol.name}</small></button>;
-          })}</div></section>
-          <section className="tool-section"><h3><ImagePlus size={17} /> Kendi görselin</h3><label className="upload-zone"><Upload /><b>Görsel yükle</b><span>PNG, JPG veya SVG · maks. 8 MB</span><input type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" onChange={(event) => upload(event.target.files?.[0])} /></label>{notice && <div className="quality-note"><Info size={15} /> {notice}</div>}</section>
-          <section className="tool-section object-tools"><h3>Nesne düzenleme</h3><div><button disabled={!selection} onClick={() => editorRef.current?.bringForward()}><ArrowUpToLine /> Öne al</button><button disabled={!selection} onClick={() => editorRef.current?.sendBackward()}><ArrowDownToLine /> Arkaya al</button><button disabled={!selection} onClick={() => editorRef.current?.removeSelected()} className="danger"><Trash2 /> Sil</button></div></section>
-        </aside>
-
-        <section className="canvas-workspace">
-          <div className="side-tabs" role="tablist" aria-label="Tişört yüzü"><button className={side === 'front' ? 'is-active' : ''} onClick={() => chooseSide('front')}>Ön yüz <span>{measurements.front.length}</span></button><button className={side === 'back' ? 'is-active' : ''} onClick={() => chooseSide('back')}>Arka yüz <span>{measurements.back.length}</span></button></div>
-          <div className="editor-stage">
-            <Mockup
-              color={options.color}
-              side={side}
-              showGuide
-              className="editor-realistic-mockup"
-              editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} />}
-            />
+      {step === 'product' && <section className="studio-step product-step">
+        <div className="step-copy"><span className="editorial-index">01 / ÜRÜN</span><h1>Tuvalini seç.</h1><p>Renk, beden ve adedi belirle. Tasarımın ön ve arka yüz için aynı 30 × 40 cm üretim alanını kullanır.</p>
+          <div className="product-step-controls">
+            <fieldset><legend>Tişört rengi — <b>{colorNames[options.color]}</b></legend><div className="shirt-colors">{(['white','black','beige','purple'] as ShirtColor[]).map((color) => <button key={color} className={options.color === color ? 'is-active' : ''} onClick={() => setOptions({ ...options, color })}><i style={{ background: colorHex[color] }} />{colorNames[color]}</button>)}</div></fieldset>
+            <fieldset><legend>Beden</legend><div className="sizes">{(['S','M','L','XL'] as ShirtSize[]).map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></fieldset>
+            <fieldset><legend>Adet</legend><div className="stepper"><button onClick={() => setOptions({ ...options, quantity: Math.max(1, options.quantity - 1) })} aria-label="Adedi azalt"><Minus /></button><input aria-label="Adet" type="number" min="1" max="50" value={options.quantity} onChange={(event) => setOptions({ ...options, quantity: Math.min(50, Math.max(1, Number(event.target.value))) })} /><button onClick={() => setOptions({ ...options, quantity: Math.min(50, options.quantity + 1) })} aria-label="Adedi artır"><Plus /></button></div></fieldset>
           </div>
-          <div className="canvas-hint"><RotateCcw size={15} /> Nesneyi seç; köşelerden ölçekle, üst noktadan döndür. Tasarımlar 30 × 40 cm baskı alanı içinde tutulur.</div>
-        </section>
+          <button className="button button--ink" onClick={() => setStep('design')}>Tasarıma geç <ArrowRight /></button>
+        </div>
+        <div className="product-step-mockups"><div><Mockup color={options.color} side="front" className="product-choice-mockup" /><span>ÖN</span></div><div><Mockup color={options.color} side="back" className="product-choice-mockup" /><span>ARKA</span></div></div>
+      </section>}
 
-        <aside className="options-panel">
-          <div className="panel-title"><span>02</span><div><b>Ürün & Sipariş</b><small>Seçenekleri belirle</small></div></div>
-          <section className="option-section"><h3>Tişört rengi <b>{colorNames[options.color]}</b></h3><div className="shirt-colors">{(['white', 'black', 'beige', 'purple'] as ShirtColor[]).map((color) => <button key={color} className={options.color === color ? 'is-active' : ''} onClick={() => setOptions({ ...options, color })}><i style={{ background: colorHex[color] }} />{colorNames[color]}</button>)}</div></section>
-          <section className="option-section"><h3>Beden</h3><div className="sizes">{(['S', 'M', 'L', 'XL'] as ShirtSize[]).map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></section>
-          <section className="option-section"><h3>Adet</h3><div className="stepper"><button onClick={() => setOptions({ ...options, quantity: Math.max(1, options.quantity - 1) })} aria-label="Adedi azalt"><Minus /></button><input aria-label="Adet" type="number" min="1" max="50" value={options.quantity} onChange={(event) => setOptions({ ...options, quantity: Math.min(50, Math.max(1, Number(event.target.value))) })} /><button onClick={() => setOptions({ ...options, quantity: Math.min(50, options.quantity + 1) })} aria-label="Adedi artır"><Plus /></button></div><small>5+ adette %7, 10+ adette %12 indirim</small></section>
-
-          <section className="selection-card">
-            <h3>Seçili nesne</h3>
-            {selection ? (
-              <>
-                <b>{selection.label}</b>
-                <div className="measure-grid"><span><small>Merkez X / Y</small>{selection.measurement.xCm} / {selection.measurement.yCm} cm</span><span><small>G × Y</small>{selection.measurement.widthCm} × {selection.measurement.heightCm} cm</span><span><small>Dönüş</small>{selection.measurement.angle}°</span><span><small>Tür</small>{selection.kind === 'text' ? 'Metin' : selection.kind === 'symbol' ? 'Vektör' : selection.measurement.vector ? 'SVG / vektör' : 'Raster görsel'}</span></div>
-                {selection.measurement.estimatedPpi !== undefined && <div className={`ppi-badge ppi-badge--${selection.measurement.quality}`}><b>{selection.measurement.estimatedPpi} PPI</b><span>{qualityLabel[selection.measurement.quality!]}</span></div>}
-                <small className="coordinate-note">X/Y, baskı alanının sol üstünden nesne merkezine ölçülür.</small>
-              </>
-            ) : <p>Ölçü, merkez konumu ve raster kalitesini görmek için baskı alanından bir nesne seç.</p>}
+      {step === 'design' && <section className="studio-step design-step">
+        <aside className="design-tools">
+          <div className="step-panel-heading"><span>02 / TASARIM</span><h2>Fikrini yerleştir.</h2><p>Bir araç seç, sonra baskı alanında düzenle.</p></div>
+          <section className="tool-section"><h3><Type /> Metin</h3><button className="tool-action" onClick={() => editorRef.current?.addText()}><Plus /> Metin ekle</button>
+            {selection?.kind === 'text' && <div className="text-controls"><label>Metin<textarea value={selection.text ?? ''} onChange={(event) => editorRef.current?.updateSelected({ text: event.target.value })} /></label><div className="two-cols"><label>Yazı tipi<select value={selection.fontFamily} onChange={(event) => editorRef.current?.updateSelected({ fontFamily: event.target.value })}><option value="Arial">Sans-serif</option><option value="Georgia">Serif</option><option value="Courier New">Monospace</option><option value="Impact">Display</option></select></label><label>Punto<input type="number" min="12" max="120" value={selection.fontSize ?? 34} onChange={(event) => editorRef.current?.updateSelected({ fontSize: Number(event.target.value) })} /></label></div><div className="inline-controls"><label>Renk<input type="color" value={selection.fill ?? '#0f172a'} onChange={(event) => editorRef.current?.updateSelected({ fill: event.target.value })} /></label><button className={selection.fontWeight === 700 ? 'is-active' : ''} onClick={() => editorRef.current?.updateSelected({ fontWeight: selection.fontWeight === 700 ? 400 : 700 })} aria-label="Kalın yazı">B</button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'left' })} aria-label="Sola hizala"><AlignLeft /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'center' })} aria-label="Ortala"><AlignCenter /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'right' })} aria-label="Sağa hizala"><AlignRight /></button></div></div>}
           </section>
-
-          <section className="price-card"><div className="price-title"><span>Fiyat simülasyonu</span><b>{formatTRY(price.total)}</b></div><dl><div><dt>Temel tişört</dt><dd>{formatTRY(price.baseUnit)} × {options.quantity}</dd></div><div><dt>Ön baskı</dt><dd>{measurements.front.length ? `${formatTRY(price.frontUnit)} × ${options.quantity}` : '—'}</dd></div><div><dt>Arka baskı</dt><dd>{measurements.back.length ? `${formatTRY(price.backUnit)} × ${options.quantity}` : '—'}</dd></div>{price.discount > 0 && <div className="discount"><dt>Adet indirimi</dt><dd>−{formatTRY(price.discount)}</dd></div>}</dl><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--primary button--wide" onClick={() => setShowSummary(true)}>Tasarımı Tamamla</button></section>
+          <section className="tool-section"><h3><WandSparkles /> Hazır semboller</h3><div className="symbol-grid">{symbols.map((symbol) => { const active = measurements[side].some((item) => item.kind === 'symbol' && item.label === symbol.name); return <button key={symbol.name} className={active ? 'is-active' : ''} aria-pressed={active} onClick={() => editorRef.current?.toggleSymbol(symbol.svg, symbol.name)} title={active ? `${symbol.name} sembolünü kaldır` : `${symbol.name} sembolünü ekle`}><b>{symbol.icon}</b><small>{symbol.name}</small></button>; })}</div></section>
+          <section className="tool-section"><h3><ImagePlus /> Kendi görselin</h3><label className="upload-zone"><Upload /><b>Görsel yükle</b><span>PNG, JPG veya SVG · maks. 8 MB</span><input type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" onChange={(event) => upload(event.target.files?.[0])} /></label>{notice && <div className="quality-note"><Info /> {notice}</div>}</section>
+          <section className="tool-section object-tools"><h3>Nesne düzenleme</h3><div><button disabled={!selection} onClick={() => editorRef.current?.bringForward()}><ArrowUpToLine /> Öne al</button><button disabled={!selection} onClick={() => editorRef.current?.sendBackward()}><ArrowDownToLine /> Arkaya al</button><button disabled={!selection} onClick={() => editorRef.current?.removeSelected()} className="danger"><Trash2 /> Sil</button></div></section>
+          {selection && <section className="selection-card selection-card--context"><b>{selection.label}</b><div className="measure-grid"><span><small>Merkez X / Y</small>{selection.measurement.xCm} / {selection.measurement.yCm} cm</span><span><small>G × Y</small>{selection.measurement.widthCm} × {selection.measurement.heightCm} cm</span><span><small>Dönüş</small>{selection.measurement.angle}°</span><span><small>Tür</small>{selection.kind === 'text' ? 'Metin' : selection.measurement.vector ? 'Vektör' : 'Raster'}</span></div>{selection.measurement.estimatedPpi !== undefined && <div className={`ppi-badge ppi-badge--${selection.measurement.quality}`}><b>{selection.measurement.estimatedPpi} PPI</b><span>{qualityLabel[selection.measurement.quality!]}</span></div>}</section>}
         </aside>
-      </div>
+        <div className="design-canvas">
+          <div className="side-tabs" role="tablist" aria-label="Tişört yüzü"><button className={side === 'front' ? 'is-active' : ''} onClick={() => chooseSide('front')}>Ön yüz <span>{measurements.front.length}</span></button><button className={side === 'back' ? 'is-active' : ''} onClick={() => chooseSide('back')}>Arka yüz <span>{measurements.back.length}</span></button></div>
+          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} />} /></div>
+          <div className="canvas-hint"><RotateCcw /> Nesneyi seç; köşelerden ölçekle, üst noktadan döndür.</div>
+          <div className="step-actions"><button className="button button--ghost" onClick={() => setStep('product')}><ArrowLeft /> Ürüne dön</button><button className="button button--ink" onClick={() => setStep('preview')}>Önizlemeye geç <ArrowRight /></button></div>
+        </div>
+      </section>}
+
+      {step === 'preview' && <section className="studio-step preview-step">
+        <div className="preview-gallery"><div><span>ÖN / {measurements.front.length} NESNE</span><Mockup color={options.color} side="front" designUrl={previews.front} /></div><div><span>ARKA / {measurements.back.length} NESNE</span><Mockup color={options.color} side="back" designUrl={previews.back} /></div></div>
+        <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addCustomDesignToCart}>Sepete ekle</button><button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
+      </section>}
 
       {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
       {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
