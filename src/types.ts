@@ -2,13 +2,17 @@ export type Side = 'front' | 'back';
 export type ShirtColor = 'white' | 'black' | 'beige' | 'purple';
 export type ShirtSize = 'S' | 'M' | 'L' | 'XL';
 export type ItemKind = 'text' | 'symbol' | 'image';
+export type ProductCategory = 'cosmic' | 'anatolia' | 'signal' | 'typography';
 
 export interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
+  category: ProductCategory;
   colors: ShirtColor[];
+  sizes: ShirtSize[];
+  stock: Partial<Record<ShirtColor, Partial<Record<ShirtSize, number>>>>;
   artwork: 'orbit' | 'anatolia' | 'signal' | 'typography';
 }
 

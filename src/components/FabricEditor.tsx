@@ -101,6 +101,7 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       width: CANVAS_WIDTH, height: CANVAS_HEIGHT, preserveObjectStacking: true, selectionColor: 'rgba(124,58,237,.1)',
     });
     canvasRef.current = canvas;
+    let disposed = false;
 
     const notify = () => {
       if (!readyRef.current) return;
@@ -130,12 +131,16 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
     canvas.on('selection:updated', select);
     canvas.on('selection:cleared', () => callbacksRef.current.onSelection(null));
 
-    canvas.loadFromJSON(initialDocumentRef.current).then(() => {
+    const initialize = () => {
+      if (disposed) return;
       readyRef.current = true;
       canvas.getObjects().forEach((object) => keepInside(canvas, object as MetaObject));
       canvas.renderAll(); notify();
-    });
-    return () => { readyRef.current = false; canvas.dispose(); canvasRef.current = null; };
+    };
+    const hasObjects = initialDocumentRef.current.objects.length > 0;
+    if (hasObjects) void canvas.loadFromJSON(initialDocumentRef.current).then(initialize).catch(() => undefined);
+    else initialize();
+    return () => { disposed = true; readyRef.current = false; if (canvasRef.current === canvas) canvasRef.current = null; canvas.dispose(); };
   }, [side]);
 
   const addObject = (object: MetaObject) => {
