@@ -1,8 +1,8 @@
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpToLine,
-  Eye, ImagePlus, Info, Minus, Palette, Plus, RotateCcw, Save, Shirt, Trash2, Type, Upload, WandSparkles,
+  Download, Eye, ImagePlus, Info, Minus, Palette, Plus, Redo2, RotateCcw, Save, Shirt, Trash2, Type, Undo2, Upload, WandSparkles,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { colorHex, colorNames, emptyDesign } from '../data/products';
 import { symbols } from '../data/symbols';
 import { clearDraft, createEmptyDraft, loadDraft, saveDraft } from '../lib/draftStorage';
@@ -12,8 +12,11 @@ import type { CartItem, DesignDocument, ObjectMeasurement, OrderOptions, Preview
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
 import { EmailModal, SummaryModal } from './OrderModals';
+import { mockupImages } from '../data/mockups';
+import { exportSides, exportWarnings as getExportWarnings } from '../lib/export';
 
 type StudioStep = 'product' | 'design' | 'preview';
+type History = { entries: DesignDocument[]; index: number };
 const steps: { id: StudioStep; label: string; icon: typeof Shirt }[] = [
   { id: 'product', label: 'Ürün', icon: Shirt }, { id: 'design', label: 'Tasarım', icon: Palette }, { id: 'preview', label: 'Önizleme', icon: Eye },
 ];
@@ -26,6 +29,8 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [step, setStep] = useState<StudioStep>('product');
   const [side, setSide] = useState<Side>(initialDraft.current.activeSide);
   const [documents, setDocuments] = useState<Record<Side, DesignDocument>>(initialDraft.current.documents);
+  const [history, setHistory] = useState<Record<Side, History>>(() => ({ front: { entries: [initialDraft.current.documents.front], index: 0 }, back: { entries: [initialDraft.current.documents.back], index: 0 } }));
+  const [editorRevision, setEditorRevision] = useState<Record<Side, number>>({ front: 0, back: 0 });
   const [measurements, setMeasurements] = useState<Record<Side, ObjectMeasurement[]>>({ front: [], back: [] });
   const [previews, setPreviews] = useState<PreviewImages>(initialDraft.current.previews ?? { front: '', back: '' });
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
@@ -68,9 +73,19 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
 
   const updateSide = (document: DesignDocument, items: ObjectMeasurement[], preview: string) => {
     setDocuments((current) => ({ ...current, [side]: document }));
+    setHistory((current) => { const active = current[side]; if (JSON.stringify(active.entries[active.index]) === JSON.stringify(document)) return current; const entries = [...active.entries.slice(0, active.index + 1), document].slice(-40); return { ...current, [side]: { entries, index: entries.length - 1 } }; });
     setMeasurements((current) => ({ ...current, [side]: items }));
     setPreviews((current) => ({ ...current, [side]: preview }));
   };
+  const restoreHistory = useCallback((direction: -1 | 1) => { const active = history[side]; const index = active.index + direction; if (index < 0 || index >= active.entries.length) return; setHistory((current) => ({ ...current, [side]: { ...current[side], index } })); setDocuments((current) => ({ ...current, [side]: active.entries[index] })); setEditorRevision((current) => ({ ...current, [side]: current[side] + 1 })); setSelection(null); }, [history, side]);
+  const downloadPng = (target: Side | 'both') => { const sides = exportSides(target); let found = false; sides.forEach((exportSide) => { const image = previews[exportSide]; if (!image) return; found = true; const link = document.createElement('a'); link.href = image; link.download = `teelab-${exportSide}-tasarim.png`; link.click(); }); if (!found) setNotice('PNG export için önce tasarım alanına bir nesne ekle.'); };
+  const downloadMockup = async (exportSide: Side) => {
+    const design = previews[exportSide]; if (!design) return setNotice('Mockup PNG için önce bu yüzde tasarım oluştur.');
+    const load = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source; });
+    try { const [base, print] = await Promise.all([load(mockupImages[exportSide][options.color]), load(design)]); const canvas = document.createElement('canvas'); canvas.width = base.naturalWidth; canvas.height = base.naturalHeight; const context = canvas.getContext('2d'); if (!context) return; context.drawImage(base, 0, 0); context.globalAlpha = .92; context.drawImage(print, base.naturalWidth * .3, base.naturalHeight * .215, base.naturalWidth * .4, base.naturalHeight * .535); const link = document.createElement('a'); link.href = canvas.toDataURL('image/png'); link.download = `teelab-${exportSide}-mockup.png`; link.click(); } catch { setNotice('Mockup PNG hazırlanamadı. Lütfen tekrar dene.'); }
+  };
+  const exportWarnings = getExportWarnings(measurements[side]);
+  useEffect(() => { const listener = (event: KeyboardEvent) => { if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z' || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return; event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); }; window.addEventListener('keydown', listener); return () => window.removeEventListener('keydown', listener); }, [restoreHistory]);
   const chooseSide = (next: Side) => { setSelection(null); setSide(next); };
   const upload = async (file?: File) => {
     if (!file) return;
@@ -122,8 +137,10 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
         </aside>
         <div className="design-canvas">
           <div className="side-tabs" role="tablist" aria-label="Tişört yüzü"><button className={side === 'front' ? 'is-active' : ''} onClick={() => chooseSide('front')}>Ön yüz <span>{measurements.front.length}</span></button><button className={side === 'back' ? 'is-active' : ''} onClick={() => chooseSide('back')}>Arka yüz <span>{measurements.back.length}</span></button></div>
-          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} />} /></div>
+          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}-${editorRevision[side]}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} />} /></div>
           <div className="canvas-hint"><RotateCcw /> Nesneyi seç; köşelerden ölçekle, üst noktadan döndür.</div>
+          <div className="studio-history" role="group" aria-label="Geçmiş ve PNG export"><button disabled={history[side].index === 0} onClick={() => restoreHistory(-1)}><Undo2 /> Geri al</button><button disabled={history[side].index === history[side].entries.length - 1} onClick={() => restoreHistory(1)}><Redo2 /> Yinele</button><button disabled={!measurements[side].length} onClick={() => downloadPng(side)}><Download /> Bu yüz PNG</button><button disabled={!measurements.front.length && !measurements.back.length} onClick={() => downloadPng('both')}><Download /> Ön + arka PNG</button><button disabled={!measurements[side].length} onClick={() => downloadMockup(side)}><Download /> Mockup PNG</button></div>
+          {exportWarnings.length > 0 && <div className="quality-note" role="status"><Info /> {exportWarnings.join(' ')}</div>}
           <div className="step-actions"><button className="button button--ghost" onClick={() => setStep('product')}><ArrowLeft /> Ürüne dön</button><button className="button button--ink" onClick={() => setStep('preview')}>Önizlemeye geç <ArrowRight /></button></div>
         </div>
       </section>}
