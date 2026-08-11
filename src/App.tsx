@@ -84,6 +84,7 @@ export default function App() {
   };
 
   const updateQuantity = (id: string, quantity: number) => setCart((current) => current.map((item) => item.id === id ? { ...item, quantity } : item).filter((item) => item.quantity > 0));
+  const clearCart = () => setCart([]);
 
   return (
     <div className="app-shell">
@@ -93,7 +94,7 @@ export default function App() {
         <Route path="/" element={<Catalog onCustomize={() => navigate('/studio')} onProduct={(product) => navigate(`/koleksiyon/${product.id}`)} />} />
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
         <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
-        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onContinue={() => navigate('/')} />} />
+        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onComplete={clearCart} onContinue={() => navigate('/')} />} />
         <Route path="*" element={<NotFoundPage onReturn={() => navigate('/')} />} />
       </Routes>
       {!isStudio && <footer>

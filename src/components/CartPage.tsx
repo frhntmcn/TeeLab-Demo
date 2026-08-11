@@ -8,10 +8,11 @@ import { ShirtVisual } from './Artwork';
 interface Props {
   items: CartItem[];
   onUpdate: (id: string, quantity: number) => void;
+  onComplete: () => void;
   onContinue: () => void;
 }
 
-export function CartPage({ items, onUpdate, onContinue }: Props) {
+export function CartPage({ items, onUpdate, onComplete, onContinue }: Props) {
   const [completed, setCompleted] = useState(false);
   const subtotal = useMemo(() => items.reduce((total, item) => total + item.unitPrice * item.quantity, 0), [items]);
 
@@ -43,7 +44,7 @@ export function CartPage({ items, onUpdate, onContinue }: Props) {
           </section>
           <aside className="checkout-card">
             <span className="eyebrow">TESLİMAT BİLGİLERİ</span><h2>Siparişini tamamla</h2>
-            <form onSubmit={(event) => { event.preventDefault(); setCompleted(true); }}>
+            <form onSubmit={(event) => { event.preventDefault(); onComplete(); setCompleted(true); }}>
               <label>Ad soyad<input required autoComplete="name" /></label>
               <div className="checkout-fields"><label>Telefon<input required type="tel" autoComplete="tel" placeholder="05__ ___ __ __" /></label><label>E-posta<input required type="email" autoComplete="email" /></label></div>
               <label>Teslimat adresi<textarea required autoComplete="street-address" rows={3} /></label>
