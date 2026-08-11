@@ -2,15 +2,23 @@ import { ArrowLeft, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import { colorHex, colorNames } from '../data/products';
 import { formatTRY } from '../lib/pricing';
+import { colorHasStock, firstAvailableSize, getVariantStock } from '../lib/stock';
 import type { CartItem, Product, ShirtColor, ShirtSize, Side } from '../types';
 import { ShirtVisual } from './Artwork';
 
 export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product: Product; onBack: () => void; onCustomize: () => void; onAdd: (item: CartItem) => void }) {
   const [color, setColor] = useState<ShirtColor>(product.colors[0]);
-  const [size, setSize] = useState<ShirtSize>('M');
+  const [size, setSize] = useState<ShirtSize>(() => firstAvailableSize(product, product.colors[0]));
   const [quantity, setQuantity] = useState(1);
   const [viewSide, setViewSide] = useState<Side>('front');
   const [added, setAdded] = useState(false);
+  const stock = getVariantStock(product, color, size);
+  const isSoldOut = stock === 0;
+  const selectColor = (nextColor: ShirtColor) => {
+    setColor(nextColor);
+    if (getVariantStock(product, nextColor, size) === 0) setSize(firstAvailableSize(product, nextColor));
+    setQuantity(1);
+  };
   const add = () => {
     onAdd({ id: `${product.id}-${color}-${size}-${Date.now()}`, designHash: `catalog:${product.artwork}`, productId: product.id, name: product.name, color, size, quantity, unitPrice: product.price, artwork: product.artwork });
     setAdded(true);
@@ -33,10 +41,11 @@ export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product
         <section className="detail-panel">
           <span className="eyebrow">TEELAB / KOLEKSİYON</span><h1>{product.name}</h1><p className="detail-lead">{product.description} 220 gr premium penye kumaş ve kalıcı DTG baskı.</p>
           <strong className="detail-price">{formatTRY(product.price * quantity)}</strong>
-          <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button key={item} type="button" className={`color-option ${color === item ? 'is-active' : ''}`} aria-label={colorNames[item]} aria-pressed={color === item} onClick={() => setColor(item)} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
-          <fieldset><legend>Beden</legend><div className="option-row">{(['S','M','L','XL'] as ShirtSize[]).map((item) => <button key={item} type="button" className={`size-option ${size === item ? 'is-active' : ''}`} aria-pressed={size === item} onClick={() => setSize(item)}>{item}</button>)}</div></fieldset>
-          <div className="quantity-field" role="group" aria-label="Ürün adedi"><span>Adet</span><div><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Adedi azalt">−</button><b aria-live="polite" aria-atomic="true">{quantity}</b><button type="button" onClick={() => setQuantity(Math.min(25, quantity + 1))} aria-label="Adedi artır">+</button></div></div>
-          <button className="button button--primary button--wide" type="button" onClick={add}><ShoppingBag size={18} /> Sepete Ekle</button>
+          <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button key={item} type="button" disabled={!colorHasStock(product, item)} className={`color-option ${color === item ? 'is-active' : ''}`} aria-label={colorNames[item]} aria-pressed={color === item} onClick={() => selectColor(item)} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
+          <fieldset><legend>Beden</legend><div className="option-row">{product.sizes.map((item) => { const unavailable = getVariantStock(product, color, item) === 0; return <button key={item} type="button" disabled={unavailable} className={`size-option ${size === item ? 'is-active' : ''}`} aria-label={unavailable ? `${item} beden tükendi` : `${item} beden`} aria-pressed={size === item} onClick={() => { setSize(item); setQuantity(1); }}>{unavailable ? `${item} · Tükendi` : item}</button>; })}</div></fieldset>
+          <div className="quantity-field" role="group" aria-label="Ürün adedi"><span>Adet</span><div><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Adedi azalt">−</button><b aria-live="polite" aria-atomic="true">{quantity}</b><button type="button" disabled={isSoldOut || quantity >= stock} onClick={() => setQuantity(quantity + 1)} aria-label="Adedi artır">+</button></div></div>
+          <p className={`stock-status ${isSoldOut ? 'is-sold-out' : ''}`} role="status">{isSoldOut ? 'Tükendi' : `Stokta ${stock} adet kaldı`}</p>
+          <button className="button button--primary button--wide" type="button" disabled={isSoldOut} onClick={add}><ShoppingBag size={18} /> {isSoldOut ? 'Tükendi' : 'Sepete Ekle'}</button>
           {added && <div className="toast" role="status"><CheckCircle2 size={18} /> Demo sepetine eklendi.</div>}
           <button className="customize-link" type="button" onClick={onCustomize}>Bu tasarımı kendine göre özelleştir →</button>
           <ul className="feature-list"><li><CheckCircle2 size={17} /> 220 gr premium pamuk</li><li><CheckCircle2 size={17} /> Su bazlı, canlı DTG baskı</li><li><CheckCircle2 size={17} /> 2–4 iş gününde üretim</li></ul>

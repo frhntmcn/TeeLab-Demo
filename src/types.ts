@@ -11,6 +11,8 @@ export interface Product {
   price: number;
   category: ProductCategory;
   colors: ShirtColor[];
+  sizes: ShirtSize[];
+  stock: Partial<Record<ShirtColor, Partial<Record<ShirtSize, number>>>>;
   artwork: 'orbit' | 'anatolia' | 'signal' | 'typography';
 }
 

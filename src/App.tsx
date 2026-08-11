@@ -9,6 +9,7 @@ import { ProductDetail } from './components/ProductDetail';
 import { products } from './data/products';
 import type { CartItem } from './types';
 import { mergeCartItem } from './lib/cart';
+import { getVariantStock, isCartInStock } from './lib/stock';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
 const CART_KEY = 'teelab-demo-cart-v1';
@@ -80,11 +81,27 @@ export default function App() {
   }, [cart]);
 
   const addToCart = (next: CartItem) => {
-    setCart((current) => mergeCartItem(current, next));
+    setCart((current) => {
+      const product = products.find((item) => item.id === next.productId);
+      if (product && !next.isCustom) {
+        const currentQuantity = current.filter((item) => item.productId === next.productId && item.color === next.color && item.size === next.size).reduce((total, item) => total + item.quantity, 0);
+        if (currentQuantity + next.quantity > getVariantStock(product, next.color, next.size)) return current;
+      }
+      return mergeCartItem(current, next);
+    });
   };
 
-  const updateQuantity = (id: string, quantity: number) => setCart((current) => current.map((item) => item.id === id ? { ...item, quantity } : item).filter((item) => item.quantity > 0));
-  const clearCart = () => setCart([]);
+  const updateQuantity = (id: string, quantity: number) => setCart((current) => current.map((item) => {
+    if (item.id !== id) return item;
+    const product = products.find((candidate) => candidate.id === item.productId);
+    const max = product && !item.isCustom ? getVariantStock(product, item.color, item.size) : quantity;
+    return { ...item, quantity: Math.min(quantity, max) };
+  }).filter((item) => item.quantity > 0));
+  const completeOrder = () => {
+    if (!isCartInStock(cart, products)) return false;
+    setCart([]);
+    return true;
+  };
 
   return (
     <div className="app-shell">
@@ -94,7 +111,7 @@ export default function App() {
         <Route path="/" element={<Catalog onCustomize={() => navigate('/studio')} onProduct={(product) => navigate(`/koleksiyon/${product.id}`)} />} />
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
         <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
-        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onComplete={clearCart} onContinue={() => navigate('/')} />} />
+        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onComplete={completeOrder} onContinue={() => navigate('/')} />} />
         <Route path="*" element={<NotFoundPage onReturn={() => navigate('/')} />} />
       </Routes>
       {!isStudio && <footer>
