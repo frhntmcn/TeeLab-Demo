@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Catalog } from './components/Catalog';
 import { CartPage } from './components/CartPage';
 import { Header } from './components/Header';
 import { Logo } from './components/Logo';
+import { NotFoundPage } from './components/NotFoundPage';
 import { ProductDetail } from './components/ProductDetail';
 import { products } from './data/products';
 import type { CartItem } from './types';
@@ -63,7 +64,7 @@ function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
     return () => script.remove();
   }, [product]);
 
-  if (!product) return <Navigate to="/" replace />;
+  if (!product) return <NotFoundPage onReturn={() => navigate('/')} />;
   return <ProductDetail product={product} onBack={() => navigate('/#koleksiyon')} onCustomize={() => navigate('/studio')} onAdd={onAdd} />;
 }
 
@@ -93,7 +94,7 @@ export default function App() {
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
         <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
         <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onContinue={() => navigate('/')} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage onReturn={() => navigate('/')} />} />
       </Routes>
       {!isStudio && <footer>
         <Logo inverse />

@@ -1,10 +1,20 @@
 import { ArrowRight, Check, Sparkles } from 'lucide-react';
-import { colorHex, colorNames, products } from '../data/products';
+import { useMemo, useState } from 'react';
+import { categoryLabels, colorHex, colorNames, products } from '../data/products';
+import { filterProducts, type CatalogFilter } from '../lib/catalog';
 import { formatTRY } from '../lib/pricing';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
+const filters: { value: CatalogFilter; label: string }[] = [
+  { value: 'all', label: 'Tümü' },
+  ...Object.entries(categoryLabels).map(([value, label]) => ({ value: value as CatalogFilter, label })),
+];
+
 export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; onProduct: (product: Product) => void }) {
+  const [activeFilter, setActiveFilter] = useState<CatalogFilter>('all');
+  const filteredProducts = useMemo(() => filterProducts(products, activeFilter), [activeFilter]);
+
   return (
     <main className="catalog-page">
       <section className="editorial-hero">
@@ -29,25 +39,33 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           <div><span className="editorial-index">HAZIR KOLEKSİYON</span><h2>Dört fikir.<br />İki yüz.</h2></div>
           <p>Her parça ön ve arka yüzüyle birlikte düşünülür. Baskı dokusu, kumaş ve renk tek bir kompozisyonda buluşur.</p>
         </header>
-        <div className="editorial-product-grid">
-          {products.map((product, index) => (
-            <article className="editorial-product" key={product.id}>
-              <button className="editorial-product__visual" onClick={() => onProduct(product)} aria-label={`${product.name} ürününü incele`}>
-                <span className="editorial-product__number">0{index + 1}</span>
-                <div><ShirtVisual color={product.colors[0]} side="front" artwork={product.artwork} label={`${product.name} ön görünümü`} /><small>ÖN</small></div>
-                <div><ShirtVisual color={product.colors[0]} side="back" artwork={product.artwork} label={`${product.name} arka görünümü`} /><small>ARKA</small></div>
-              </button>
-              <div className="editorial-product__info">
-                <div><h3>{product.name}</h3><p>{product.description}</p></div>
-                <strong>{formatTRY(product.price)}</strong>
-              </div>
-              <div className="editorial-product__footer">
-                <div className="swatches" aria-label="Renk seçenekleri">{product.colors.map((color) => <span key={color} title={colorNames[color]} style={{ background: colorHex[color] }} />)}</div>
-                <button onClick={() => onProduct(product)}>Ürünü incele <ArrowRight size={15} /></button>
-              </div>
-            </article>
-          ))}
+        <div className="catalog-filters" role="group" aria-label="Koleksiyon kategorileri">
+          {filters.map((filter) => <button key={filter.value} type="button" className={activeFilter === filter.value ? 'is-active' : ''} aria-pressed={activeFilter === filter.value} onClick={() => setActiveFilter(filter.value)}>{filter.label}</button>)}
         </div>
+        <p className="sr-only" role="status" aria-live="polite">{activeFilter === 'all' ? `${filteredProducts.length} ürün gösteriliyor.` : `${categoryLabels[activeFilter]} kategorisinde ${filteredProducts.length} ürün gösteriliyor.`}</p>
+        {filteredProducts.length ? (
+          <div className="editorial-product-grid">
+            {filteredProducts.map((product, index) => (
+              <article className="editorial-product" key={product.id}>
+                <button className="editorial-product__visual" onClick={() => onProduct(product)} aria-label={`${product.name} ürününü incele`}>
+                  <span className="editorial-product__number">0{index + 1}</span>
+                  <div><ShirtVisual color={product.colors[0]} side="front" artwork={product.artwork} label={`${product.name} ön görünümü`} /><small>ÖN</small></div>
+                  <div><ShirtVisual color={product.colors[0]} side="back" artwork={product.artwork} label={`${product.name} arka görünümü`} /><small>ARKA</small></div>
+                </button>
+                <div className="editorial-product__info">
+                  <div><p className="editorial-product__category">{categoryLabels[product.category]}</p><h3>{product.name}</h3><p>{product.description}</p></div>
+                  <strong>{formatTRY(product.price)}</strong>
+                </div>
+                <div className="editorial-product__footer">
+                  <div className="swatches" aria-label="Renk seçenekleri">{product.colors.map((color) => <span key={color} title={colorNames[color]} style={{ background: colorHex[color] }} />)}</div>
+                  <button onClick={() => onProduct(product)}>Ürünü incele <ArrowRight size={15} /></button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <section className="catalog-empty" role="status"><h3>Bu kategoride henüz ürün yok.</h3><p>Diğer fikirleri görmek için tüm koleksiyona dönebilirsin.</p><button className="button button--ink" type="button" onClick={() => setActiveFilter('all')}>Tümünü göster</button></section>
+        )}
       </section>
 
       <section className="editorial-studio-cta">

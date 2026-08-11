@@ -32,3 +32,4 @@ Thumbs.db
 
 # Superdesign temporary component templates
 .superdesign/tmp/
+.playwright-cli/
