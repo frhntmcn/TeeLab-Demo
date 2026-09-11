@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react'
 import { Canvas, FabricImage, FabricObject, Group, Textbox, loadSVGFromString, util } from 'fabric';
 import type { DesignDocument, ItemKind, ObjectMeasurement, Side } from '../types';
 import { round } from '../lib/pricing';
+import { qualityForPpi, validateDimensions } from '../lib/imageValidation';
 
 export const CANVAS_WIDTH = 360;
 export const CANVAS_HEIGHT = 480;
@@ -180,20 +181,24 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       }
     },
     addImage: async (file) => {
-      const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
-      if (file.type === 'image/svg+xml') {
-        const text = await file.text();
-        const parsed = await loadSVGFromString(text); const valid = parsed.objects.filter((object): object is FabricObject => object !== null);
-        const group = util.groupSVGElements(valid, parsed.options) as Group & MetaObject; group.scaleToWidth(180);
-        Object.assign(group, { itemId: uid(), itemKind: 'image', itemLabel: file.name, itemDetail: 'SVG / vektör', isVector: true }); addObject(group);
-        return { lowQuality: false, message: 'SVG vektör olarak eklendi; ölçeklenirken kalite korunur.' };
+      let imageFile = file;
+      if (file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name)) {
+        const { default: heic2any } = await import('heic2any');
+        const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+        const blob = Array.isArray(converted) ? converted[0] : converted;
+        imageFile = new File([blob], file.name.replace(/\.hei[cf]$/i, '.jpg'), { type: 'image/jpeg' });
       }
+      const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(imageFile); });
       const image = await FabricImage.fromURL(dataUrl) as FabricImage & MetaObject;
       const sourceWidth = image.width ?? 0; const sourceHeight = image.height ?? 0; image.scaleToWidth(180);
-      Object.assign(image, { itemId: uid(), itemKind: 'image', itemLabel: file.name, itemDetail: `${file.type || 'Raster'} / ${sourceWidth}×${sourceHeight} px`, isVector: false, sourcePixelWidth: sourceWidth, sourcePixelHeight: sourceHeight, sourceMime: file.type }); addObject(image);
+      const dimensionIssue = validateDimensions(sourceWidth, sourceHeight);
+      if (dimensionIssue) throw new Error(dimensionIssue);
+      Object.assign(image, { itemId: uid(), itemKind: 'image', itemLabel: file.name, itemDetail: `${imageFile.type || 'Raster'} / ${sourceWidth}×${sourceHeight} px`, isVector: false, sourcePixelWidth: sourceWidth, sourcePixelHeight: sourceHeight, sourceMime: imageFile.type });
       const measurement = getMeasurement(image, side);
       const ppi = measurement.estimatedPpi ?? 0;
-      const lowQuality = ppi < 300;
+      if (qualityForPpi(ppi) === 'risk') throw new Error('low-ppi');
+      addObject(image);
+      const lowQuality = qualityForPpi(ppi) === 'warning';
       const message = ppi >= 300
         ? `Tahmini ${ppi} PPI — seçili baskı ölçüsü için uygun.`
         : ppi >= 200
