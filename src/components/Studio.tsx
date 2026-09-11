@@ -1,6 +1,6 @@
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpToLine,
-  Eye, ImagePlus, Info, Minus, Palette, Plus, RotateCcw, Save, Shirt, Trash2, Type, Upload, WandSparkles,
+  Eye, ImagePlus, Info, Minus, Palette, Plus, Redo2, RotateCcw, Save, Shirt, Trash2, Type, Undo2, Upload, WandSparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { colorHex, colorNames, emptyDesign } from '../data/products';
@@ -9,7 +9,7 @@ import { symbols } from '../data/symbols';
 import { clearDraft, createEmptyDraft, loadDraft, saveDraft } from '../lib/draftStorage';
 import { calculatePrice, formatTRY } from '../lib/pricing';
 import { designHash } from '../lib/designIdentity';
-import { applyTemplateToActiveSide, sideHasDesignContent } from '../lib/templateApplication';
+import { sideHasDesignContent } from '../lib/templateApplication';
 import { uploadIssueMessage, validateUploadFile } from '../lib/imageValidation';
 import { canContinue, hasOverflow } from '../lib/qualityGate';
 import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, ShirtSize, Side } from '../types';
@@ -41,7 +41,9 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [showEmail, setShowEmail] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [templateId, setTemplateId] = useState(initialDraft.current.templateId);
+  const [templateSide, setTemplateSide] = useState<Side | undefined>(initialDraft.current.templateId ? initialDraft.current.templateSide ?? initialDraft.current.activeSide : undefined);
   const [templateConfirmation, setTemplateConfirmation] = useState<DesignTemplate | null>(null);
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const allMeasurements = [...measurements.front, ...measurements.back];
   const hasOverflowDesign = hasOverflow(allMeasurements);
   const canContinueDesign = canContinue(allMeasurements);
@@ -70,18 +72,18 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSaveStatus('Kaydediliyor…');
     const timer = window.setTimeout(() => {
-      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, templateId, updatedAt: new Date().toISOString() });
+      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, templateId, templateSide, updatedAt: new Date().toISOString() });
       setSaveStatus(saved ? 'Taslak kaydedildi' : 'Yerel kayıt kullanılamıyor');
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [documents, options, previews, side, templateId]);
+  }, [documents, options, previews, side, templateId, templateSide]);
 
   const updateSide = (document: DesignDocument, items: ObjectMeasurement[], preview: string) => {
     setDocuments((current) => ({ ...current, [side]: document }));
     setMeasurements((current) => ({ ...current, [side]: items }));
     setPreviews((current) => ({ ...current, [side]: preview }));
   };
-  const chooseSide = (next: Side) => { setSelection(null); setSide(next); };
+  const chooseSide = (next: Side) => { setSelection(null); setHistoryState({ canUndo: false, canRedo: false }); setSide(next); };
   const upload = async (file?: File) => {
     if (!file || uploading) return;
     const validation = await validateUploadFile(file);
@@ -99,19 +101,18 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     skipNextSave.current = true; clearDraft(); const empty = createEmptyDraft();
     setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setPreviews({ front: '', back: '' });
     setOptions(empty.options); setSide('front'); setSelection(null); setNotice('Yerel demo taslağı temizlendi.'); setSaveStatus('Taslak temizlendi'); setDraftRevision((value) => value + 1);
-    setTemplateId(undefined);
+    setTemplateId(undefined); setTemplateSide(undefined); setHistoryState({ canUndo: false, canRedo: false });
   };
-  const applyTemplate = (template: DesignTemplate) => {
-    setDocuments((current) => applyTemplateToActiveSide(current, side, cloneTemplateDocument(template)));
-    setMeasurements((current) => ({ ...current, [side]: [] }));
-    setPreviews((current) => ({ ...current, [side]: '' }));
-    setSelection(null); setTemplateId(template.id); setNotice(`“${template.name}” yalnızca ${side === 'front' ? 'ön' : 'arka'} yüze uygulandı.`); setDraftRevision((value) => value + 1);
+  const applyTemplate = async (template: DesignTemplate) => {
+    const templateDocument = cloneTemplateDocument(template);
+    await editorRef.current?.replaceDocument(templateDocument);
+    setSelection(null); setTemplateId(template.id); setTemplateSide(side); setNotice(`“${template.name}” yalnızca ${side === 'front' ? 'ön' : 'arka'} yüze uygulandı.`);
   };
   const requestTemplate = (templateIdToApply: string) => {
     const template = designTemplates.find((item) => item.id === templateIdToApply);
     if (!template) return;
     if (sideHasDesignContent(documents[side])) { setTemplateConfirmation(template); return; }
-    applyTemplate(template);
+    void applyTemplate(template);
   };
   const continueToPreview = () => {
     if (!canContinueDesign) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Önizlemeye geçmeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
@@ -159,12 +160,12 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
           </section>
           <section className="tool-section"><h3><WandSparkles /> Hazır semboller</h3><div className="symbol-grid">{symbols.map((symbol) => { const active = measurements[side].some((item) => item.kind === 'symbol' && item.label === symbol.name); return <button key={symbol.name} className={active ? 'is-active' : ''} aria-pressed={active} onClick={() => editorRef.current?.toggleSymbol(symbol.svg, symbol.name)} title={active ? `${symbol.name} sembolünü kaldır` : `${symbol.name} sembolünü ekle`}><b>{symbol.icon}</b><small>{symbol.name}</small></button>; })}</div></section>
           <section className="tool-section"><h3><ImagePlus /> Kendi görselin</h3><label className="upload-zone"><Upload /><b>{uploading ? 'HEIC görselin hazırlanıyor…' : 'Görsel yükle'}</b><span>PNG, JPG, WebP veya HEIC · maks. 10 MB</span><small>HEIC görseller cihazında dönüştürülür. SVG için hazır sembolleri kullan.</small><input type="file" disabled={uploading} accept=".png,.jpg,.jpeg,.webp,.heic,.heif,image/png,image/jpeg,image/webp,image/heic,image/heif" onChange={(event) => upload(event.target.files?.[0])} /></label>{notice && <div className="quality-note" role="status" aria-live="polite"><Info /> {notice}</div>}</section>
-          <section className="tool-section object-tools"><h3>Nesne düzenleme</h3><div><button disabled={!selection} onClick={() => editorRef.current?.bringForward()}><ArrowUpToLine /> Öne al</button><button disabled={!selection} onClick={() => editorRef.current?.sendBackward()}><ArrowDownToLine /> Arkaya al</button><button disabled={!selection} onClick={() => editorRef.current?.removeSelected()} className="danger"><Trash2 /> Sil</button></div></section>
+          <section className="tool-section object-tools"><h3>Nesne düzenleme</h3><div className="object-tools__actions"><button disabled={!historyState.canUndo} onClick={() => editorRef.current?.undo()} title="Geri al"><Undo2 /> Geri al</button><button disabled={!historyState.canRedo} onClick={() => editorRef.current?.redo()} title="Yinele"><Redo2 /> Yinele</button><button disabled={!selection} onClick={() => editorRef.current?.bringForward()}><ArrowUpToLine /> Öne al</button><button disabled={!selection} onClick={() => editorRef.current?.sendBackward()}><ArrowDownToLine /> Arkaya al</button><button disabled={!selection} onClick={() => editorRef.current?.removeSelected()} className="danger"><Trash2 /> Sil</button></div><div className="object-tools__align"><button disabled={!selection} onClick={() => editorRef.current?.alignHorizontal()} title="Baskı alanında yatay ortala">Yatay ortala</button><button disabled={!selection} onClick={() => editorRef.current?.alignVertical()} title="Baskı alanında dikey ortala">Dikey ortala</button></div></section>
           {selection && <section className="selection-card selection-card--context"><b>{selection.label}</b><div className="measure-grid"><span><small>Merkez X / Y</small>{selection.measurement.xCm} / {selection.measurement.yCm} cm</span><span><small>G × Y</small>{selection.measurement.widthCm} × {selection.measurement.heightCm} cm</span><span><small>Dönüş</small>{selection.measurement.angle}°</span><span><small>Tür</small>{selection.kind === 'text' ? 'Metin' : selection.measurement.vector ? 'Vektör' : 'Raster'}</span></div>{selection.measurement.estimatedPpi !== undefined && <div className={`ppi-badge ppi-badge--${selection.measurement.quality}`}><b>{selection.measurement.estimatedPpi} PPI</b><span>{qualityLabel[selection.measurement.quality!]}</span></div>}</section>}
         </aside>
         <div className="design-canvas">
           <div className="side-tabs" role="tablist" aria-label="Tişört yüzü"><button className={side === 'front' ? 'is-active' : ''} onClick={() => chooseSide('front')}>Ön yüz <span>{measurements.front.length}</span></button><button className={side === 'back' ? 'is-active' : ''} onClick={() => chooseSide('back')}>Arka yüz <span>{measurements.back.length}</span></button></div>
-          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} />} /></div>
+          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} onHistoryChange={setHistoryState} />} /></div>
           <div className="canvas-hint"><RotateCcw /> Nesneyi seç; köşelerden ölçekle, üst noktadan döndür.</div>
           <div className="step-actions"><button className="button button--ghost" onClick={() => setStep('product')}><ArrowLeft /> Ürüne dön</button><button className="button button--ink" onClick={continueToPreview} aria-describedby={!canContinueDesign ? 'quality-blocker' : undefined}>Önizlemeye geç <ArrowRight /></button></div>
           {!canContinueDesign && <p className="quality-note" id="quality-blocker" role="alert"><Info /> {hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Nesneyi alanın içine al.' : '200 PPI altındaki görsellerle önizlemeye ve sepete ilerleyemezsin.'}</p>}
@@ -173,12 +174,12 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
 
       {step === 'preview' && <section className="studio-step preview-step">
         <div className="preview-gallery"><div><span>ÖN / {measurements.front.length} NESNE</span><Mockup color={options.color} side="front" designUrl={previews.front} /></div><div><span>ARKA / {measurements.back.length} NESNE</span><Mockup color={options.color} side="back" designUrl={previews.back} /></div></div>
-        <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addToCartWithQualityCheck}>Sepete ekle</button><button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
+        <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Kesim</dt><dd>{options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addToCartWithQualityCheck}>Sepete ekle</button><button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
       </section>}
 
-      {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
-      {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
-      {templateConfirmation && <div className="template-confirmation-backdrop" role="presentation"><section className="template-confirmation" role="dialog" aria-modal="true" aria-labelledby="template-confirmation-title"><h2 id="template-confirmation-title">Mevcut tasarım değiştirilsin mi?</h2><p>“{templateConfirmation.name}” yalnızca aktif {side === 'front' ? 'ön' : 'arka'} yüzün içeriğini değiştirir. Diğer yüz korunur.</p><div><button className="button button--ghost" autoFocus onClick={() => { setTemplateConfirmation(null); setNotice('Şablon uygulanmadı; mevcut tasarımın korundu.'); }}>İptal</button><button className="button button--ink" onClick={() => { applyTemplate(templateConfirmation); setTemplateConfirmation(null); }}>Şablonu uygula</button></div></section></div>}
+      {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateId={templateId} templateSide={templateSide} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
+      {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateId={templateId} templateSide={templateSide} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
+      {templateConfirmation && <div className="template-confirmation-backdrop" role="presentation"><section className="template-confirmation" role="dialog" aria-modal="true" aria-labelledby="template-confirmation-title"><h2 id="template-confirmation-title">Mevcut tasarım değiştirilsin mi?</h2><p>“{templateConfirmation.name}” yalnızca aktif {side === 'front' ? 'ön' : 'arka'} yüzün içeriğini değiştirir. Diğer yüz korunur.</p><div><button className="button button--ghost" autoFocus onClick={() => { setTemplateConfirmation(null); setNotice('Şablon uygulanmadı; mevcut tasarımın korundu.'); }}>İptal</button><button className="button button--ink" onClick={() => { void applyTemplate(templateConfirmation); setTemplateConfirmation(null); }}>Şablonu uygula</button></div></section></div>}
     </main>
   );
 }

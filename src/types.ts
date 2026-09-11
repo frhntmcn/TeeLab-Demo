@@ -98,4 +98,5 @@ export interface SavedDraft {
   previews?: PreviewImages;
   updatedAt: string;
   templateId?: string;
+  templateSide?: Side;
 }

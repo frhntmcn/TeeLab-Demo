@@ -4,6 +4,7 @@ import type { DesignDocument, ItemKind, ObjectMeasurement, Side } from '../types
 import { round } from '../lib/pricing';
 import { qualityForPpi, validateDimensions } from '../lib/imageValidation';
 import { disposeFabricCanvas } from '../lib/fabricLifecycle';
+import { alignObjectCenter, createHistory, redoHistory, undoHistory, writeHistory } from '../lib/editorCommands';
 
 export const CANVAS_WIDTH = 360;
 export const CANVAS_HEIGHT = 480;
@@ -37,6 +38,11 @@ export interface EditorHandle {
   removeSelected: () => void;
   bringForward: () => void;
   sendBackward: () => void;
+  undo: () => void;
+  redo: () => void;
+  alignHorizontal: () => void;
+  alignVertical: () => void;
+  replaceDocument: (document: DesignDocument) => Promise<void>;
   exportImage: () => string;
 }
 
@@ -45,6 +51,7 @@ interface Props {
   document: DesignDocument;
   onChange: (document: DesignDocument, measurements: ObjectMeasurement[], preview: string) => void;
   onSelection: (selection: SelectionInfo | null) => void;
+  onHistoryChange: (history: { canUndo: boolean; canRedo: boolean }) => void;
 }
 
 const uid = () => `obj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -88,14 +95,50 @@ function keepInside(canvas: Canvas, object: MetaObject) {
   object.setCoords(); canvas.requestRenderAll();
 }
 
-export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEditor({ side, document, onChange, onSelection }, ref) {
+export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEditor({ side, document, onChange, onSelection, onHistoryChange }, ref) {
   const elementRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<Canvas | null>(null);
   const pendingSymbolsRef = useRef(new Set<string>());
   const readyRef = useRef(false);
+  const restoringRef = useRef(false);
   const initialDocumentRef = useRef(document);
-  const callbacksRef = useRef({ onChange, onSelection });
-  callbacksRef.current = { onChange, onSelection };
+  const historyRef = useRef(createHistory(document));
+  const callbacksRef = useRef({ onChange, onSelection, onHistoryChange });
+  callbacksRef.current = { onChange, onSelection, onHistoryChange };
+
+  const notifyHistory = () => callbacksRef.current.onHistoryChange({ canUndo: historyRef.current.past.length > 0, canRedo: historyRef.current.future.length > 0 });
+  const snapshot = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !readyRef.current || restoringRef.current) return;
+    historyRef.current = writeHistory(historyRef.current, canvas.toJSON() as DesignDocument);
+    notifyHistory();
+  };
+  const notify = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !readyRef.current || restoringRef.current) return;
+    const objects = canvas.getObjects() as MetaObject[];
+    callbacksRef.current.onChange(canvas.toJSON() as DesignDocument, objects.map((object) => getMeasurement(object, side)), canvas.toDataURL({ format: 'png', multiplier: 1 }));
+  };
+  const notifyRef = useRef(notify);
+  const snapshotRef = useRef(snapshot);
+  notifyRef.current = notify;
+  snapshotRef.current = snapshot;
+  const restore = async (nextDocument: DesignDocument) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    restoringRef.current = true;
+    canvas.discardActiveObject();
+    callbacksRef.current.onSelection(null);
+    try {
+      await canvas.loadFromJSON(nextDocument);
+      if (canvas.destroyed) return;
+      canvas.getObjects().forEach((object) => keepInside(canvas, object as MetaObject));
+      canvas.renderAll();
+    } finally {
+      restoringRef.current = false;
+    }
+    notify();
+  };
 
   useLayoutEffect(() => {
     if (!elementRef.current) return;
@@ -104,12 +147,6 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
     });
     canvasRef.current = canvas;
 
-    const notify = () => {
-      if (!readyRef.current) return;
-      const objects = canvas.getObjects() as MetaObject[];
-      const json = canvas.toJSON() as DesignDocument;
-      callbacksRef.current.onChange(json, objects.map((object) => getMeasurement(object, side)), canvas.toDataURL({ format: 'png', multiplier: 1 }));
-    };
     const select = () => {
       const object = canvas.getActiveObject() as MetaObject | undefined;
       if (!object) return callbacksRef.current.onSelection(null);
@@ -125,9 +162,9 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
     canvas.on('object:moving', constrain);
     canvas.on('object:scaling', constrain);
     canvas.on('object:rotating', constrain);
-    canvas.on('object:modified', () => { select(); notify(); });
-    canvas.on('object:added', notify);
-    canvas.on('object:removed', notify);
+    canvas.on('object:modified', () => { select(); notifyRef.current(); snapshotRef.current(); });
+    canvas.on('object:added', () => notifyRef.current());
+    canvas.on('object:removed', () => notifyRef.current());
     canvas.on('selection:created', select);
     canvas.on('selection:updated', select);
     canvas.on('selection:cleared', () => callbacksRef.current.onSelection(null));
@@ -138,7 +175,10 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       if (disposed || canvas.destroyed) return;
       readyRef.current = true;
       canvas.getObjects().forEach((object) => keepInside(canvas, object as MetaObject));
-      canvas.renderAll(); notify();
+      canvas.renderAll();
+      historyRef.current = createHistory(canvas.toJSON() as DesignDocument);
+      notifyHistory();
+      notifyRef.current();
     }).catch((error: unknown) => {
       if (!disposed) throw error;
     });
@@ -149,7 +189,7 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
     const canvas = canvasRef.current;
     if (!canvas) return;
     object.set({ left: CANVAS_WIDTH / 2, top: CANVAS_HEIGHT / 2, originX: 'center', originY: 'center', cornerColor: '#7c3aed', borderColor: '#7c3aed', cornerStyle: 'circle', transparentCorners: false });
-    canvas.add(object); canvas.setActiveObject(object); keepInside(canvas, object); canvas.requestRenderAll();
+    canvas.add(object); canvas.setActiveObject(object); keepInside(canvas, object); canvas.requestRenderAll(); snapshot();
   };
 
   useImperativeHandle(ref, () => ({
@@ -170,6 +210,7 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
           callbacksRef.current.onSelection(null);
         }
         canvas.requestRenderAll();
+        snapshot();
         return 'removed';
       }
 
@@ -218,9 +259,31 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       object.set(updates); if (object instanceof Textbox) (object as MetaObject).itemDetail = `${object.fontFamily} / ${object.fontSize} px`; keepInside(canvas, object); object.setCoords(); canvas.requestRenderAll();
       canvas.fire('object:modified', { target: object });
     },
-    removeSelected: () => { const canvas = canvasRef.current; const object = canvas?.getActiveObject(); if (canvas && object) { canvas.remove(object); canvas.discardActiveObject(); canvas.requestRenderAll(); callbacksRef.current.onSelection(null); } },
+    removeSelected: () => { const canvas = canvasRef.current; const object = canvas?.getActiveObject(); if (canvas && object) { canvas.remove(object); canvas.discardActiveObject(); canvas.requestRenderAll(); callbacksRef.current.onSelection(null); snapshot(); } },
     bringForward: () => { const canvas = canvasRef.current; const object = canvas?.getActiveObject(); if (canvas && object) { canvas.bringObjectForward(object); canvas.requestRenderAll(); canvas.fire('object:modified', { target: object }); } },
     sendBackward: () => { const canvas = canvasRef.current; const object = canvas?.getActiveObject(); if (canvas && object) { canvas.sendObjectBackwards(object); canvas.requestRenderAll(); canvas.fire('object:modified', { target: object }); } },
+    undo: () => { const result = undoHistory(historyRef.current); historyRef.current = result.history; notifyHistory(); if (result.document) void restore(result.document); },
+    redo: () => { const result = redoHistory(historyRef.current); historyRef.current = result.history; notifyHistory(); if (result.document) void restore(result.document); },
+    alignHorizontal: () => {
+      const canvas = canvasRef.current; const object = canvas?.getActiveObject() as MetaObject | undefined;
+      if (!canvas || !object) return;
+      const rect = object.getBoundingRect(); const target = alignObjectCenter(rect, 'horizontal', CANVAS_WIDTH, CANVAS_HEIGHT);
+      object.set({ left: (object.left ?? 0) + target.left - rect.left }); keepInside(canvas, object); canvas.fire('object:modified', { target: object });
+    },
+    alignVertical: () => {
+      const canvas = canvasRef.current; const object = canvas?.getActiveObject() as MetaObject | undefined;
+      if (!canvas || !object) return;
+      const rect = object.getBoundingRect(); const target = alignObjectCenter(rect, 'vertical', CANVAS_WIDTH, CANVAS_HEIGHT);
+      object.set({ top: (object.top ?? 0) + target.top - rect.top }); keepInside(canvas, object); canvas.fire('object:modified', { target: object });
+    },
+    replaceDocument: async (nextDocument) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const nextHistory = writeHistory(historyRef.current, nextDocument);
+      historyRef.current = nextHistory;
+      notifyHistory();
+      await restore(nextHistory.present);
+    },
     exportImage: () => canvasRef.current?.toDataURL({ format: 'png', multiplier: 2 }) ?? '',
   }));
 

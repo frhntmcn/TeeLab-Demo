@@ -12,4 +12,11 @@ describe('designHash', () => {
     const base = { front: { version: '7.4.0', objects: [] }, back: { version: '7.4.0', objects: [] } };
     expect(designHash(base)).not.toBe(designHash({ ...base, front: { version: '7.4.0', objects: [{ type: 'text' }] } }));
   });
+
+  it('does not use template metadata as part of the document hash', () => {
+    const design = { front: { version: '7.4.0', objects: [{ type: 'text', text: 'aynı' }] }, back: { version: '7.4.0', objects: [] } };
+    const metadata = { templateId: 'big-heading', templateSide: 'front' };
+    expect(designHash(design)).toBe(designHash({ ...design }));
+    expect(metadata.templateId).toBe('big-heading');
+  });
 });
