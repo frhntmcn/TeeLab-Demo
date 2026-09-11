@@ -45,6 +45,11 @@ export interface DesignTemplate {
   document: DesignDocument;
 }
 
+export interface TemplateMetadata {
+  id: string;
+  name: string;
+}
+
 export interface ObjectMeasurement {
   id: string;
   side: Side;
@@ -99,4 +104,5 @@ export interface SavedDraft {
   updatedAt: string;
   templateId?: string;
   templateSide?: Side;
+  templateMetadata?: Partial<Record<Side, TemplateMetadata>>;
 }

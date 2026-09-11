@@ -1,8 +1,7 @@
 import { Check, Download, FileArchive, Mail, X } from 'lucide-react';
 import { colorNames } from '../data/products';
-import { designTemplates } from '../data/designTemplates';
 import { formatTRY } from '../lib/pricing';
-import type { ObjectMeasurement, OrderOptions, PreviewImages, PriceBreakdown, Side } from '../types';
+import type { ObjectMeasurement, OrderOptions, PreviewImages, PriceBreakdown, Side, TemplateMetadata } from '../types';
 import { ShirtVisual } from './Artwork';
 
 interface SharedProps {
@@ -11,14 +10,11 @@ interface SharedProps {
   previews: PreviewImages;
   measurements: ObjectMeasurement[];
   orderId: string;
-  templateId?: string;
-  templateSide?: Side;
+  templateMetadata?: Partial<Record<Side, TemplateMetadata>>;
 }
 
-function templateSummary(templateId?: string, templateSide?: Side) {
-  const template = designTemplates.find((item) => item.id === templateId);
-  if (!template || !templateSide) return 'Özel tasarım';
-  return `${templateSide === 'front' ? 'Ön yüz' : 'Arka yüz'}: ${template.name}`;
+function templateSummary(metadata?: TemplateMetadata) {
+  return metadata?.name ?? 'Özel tasarım';
 }
 
 export function SummaryModal(props: SharedProps & { onClose: () => void; onEmail: () => void }) {
@@ -37,7 +33,7 @@ export function SummaryModal(props: SharedProps & { onClose: () => void; onEmail
           </div>
           <div className="order-card">
             <span className="eyebrow">SİPARİŞ ÖZETİ</span>
-            <dl><div><dt>Ürün</dt><dd>Premium Unisex Tişört</dd></div><div><dt>Renk</dt><dd>{colorNames[props.options.color]}</dd></div><div><dt>Kesim</dt><dd>{props.options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{props.options.size} / {props.options.quantity}</dd></div><div><dt>Şablon</dt><dd>{templateSummary(props.templateId, props.templateSide)}</dd></div><div><dt>Ön baskı</dt><dd>{frontCount ? `${frontCount} nesne` : 'Yok'}</dd></div><div><dt>Arka baskı</dt><dd>{backCount ? `${backCount} nesne` : 'Yok'}</dd></div></dl>
+            <dl><div><dt>Ürün</dt><dd>Premium Unisex Tişört</dd></div><div><dt>Renk</dt><dd>{colorNames[props.options.color]}</dd></div><div><dt>Kesim</dt><dd>{props.options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{props.options.size} / {props.options.quantity}</dd></div><div><dt>Ön şablon</dt><dd>{templateSummary(props.templateMetadata?.front)}</dd></div><div><dt>Arka şablon</dt><dd>{templateSummary(props.templateMetadata?.back)}</dd></div><div><dt>Ön baskı</dt><dd>{frontCount ? `${frontCount} nesne` : 'Yok'}</dd></div><div><dt>Arka baskı</dt><dd>{backCount ? `${backCount} nesne` : 'Yok'}</dd></div></dl>
             <div className="summary-total"><span>Tahmini toplam</span><strong>{formatTRY(props.price.total)}</strong></div>
             <small>KDV dahil demo fiyatıdır. Kargo dahil değildir.</small>
             <button className="button button--primary button--wide" onClick={props.onEmail}><Mail size={18} /> İmalathane e-postasını önizle</button>
@@ -56,7 +52,7 @@ export function EmailModal(props: SharedProps & { onClose: () => void }) {
     createdAt: new Date().toISOString(),
     demoOnly: true,
     product: { sku: 'TL-PREMIUM-UNI', name: 'Premium Unisex Tişört', color: colorNames[props.options.color], fit: props.options.fit, size: props.options.size, quantity: props.options.quantity },
-    template: props.templateId && props.templateSide ? { id: props.templateId, side: props.templateSide, name: templateSummary(props.templateId, props.templateSide) } : undefined,
+    templates: (['front', 'back'] as const).map((side) => ({ side, ...props.templateMetadata?.[side] })),
     printAreaCm: { width: 30, height: 40 },
     coordinateReference: 'Baskı alanının sol üst köşesinden ölçülen X/Y; nesnenin merkezi referans alınır.',
     previewPolicy: 'Mockup görselleri sunum amaçlıdır; baskı/üretim dosyası değildir.',
@@ -96,7 +92,7 @@ export function EmailModal(props: SharedProps & { onClose: () => void }) {
         <div className="email-header"><div className="email-icon"><Mail /></div><div><span>İmalathane e-postası</span><h2 id="email-title">[TeeLab] Yeni Baskı Siparişi — {props.orderId}</h2><p><b>Kime:</b> uretim@teelab.demo &nbsp; · &nbsp; <b>Kimden:</b> siparis@teelab.demo</p></div></div>
         <div className="email-body">
           <p>Merhaba Üretim Ekibi,</p><p><b>{props.orderId}</b> numaralı siparişin demo baskı paketi aşağıdadır. Lütfen yerleşim ve kaynak türlerini üretim öncesinde kontrol edin.</p>
-          <div className="email-order-grid"><span><small>SİPARİŞ NO</small><b>{props.orderId}</b></span><span><small>TARİH</small><b>{now}</b></span><span><small>ÜRÜN</small><b>Premium Unisex / {colorNames[props.options.color]} / {props.options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</b></span><span><small>BEDEN / ADET</small><b>{props.options.size} / {props.options.quantity}</b></span><span><small>ŞABLON</small><b>{templateSummary(props.templateId, props.templateSide)}</b></span><span><small>TOPLAM</small><b>{formatTRY(props.price.total)}</b></span></div>
+          <div className="email-order-grid"><span><small>SİPARİŞ NO</small><b>{props.orderId}</b></span><span><small>TARİH</small><b>{now}</b></span><span><small>ÜRÜN</small><b>Premium Unisex / {colorNames[props.options.color]} / {props.options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</b></span><span><small>BEDEN / ADET</small><b>{props.options.size} / {props.options.quantity}</b></span><span><small>ŞABLONLAR</small><b>Ön: {templateSummary(props.templateMetadata?.front)} · Arka: {templateSummary(props.templateMetadata?.back)}</b></span><span><small>TOPLAM</small><b>{formatTRY(props.price.total)}</b></span></div>
           <h3>Mockup önizlemeleri</h3><div className="email-mockups"><div><span>ÖN YÜZ</span><ShirtVisual color={props.options.color} side="front" designUrl={props.previews.front} /></div><div><span>ARKA YÜZ</span><ShirtVisual color={props.options.color} side="back" designUrl={props.previews.back} /></div></div>
           <p className="mockup-disclaimer">Mockup yalnızca yerleşim sunumudur; kumaşın fiziksel deformasyonunu veya gerçek baskı çıktısını temsil etmez.</p>
           <h3>Üretim yerleşim tablosu</h3>

@@ -12,7 +12,7 @@ import { designHash } from '../lib/designIdentity';
 import { sideHasDesignContent } from '../lib/templateApplication';
 import { uploadIssueMessage, validateUploadFile } from '../lib/imageValidation';
 import { canContinue, hasOverflow } from '../lib/qualityGate';
-import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, ShirtSize, Side } from '../types';
+import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, ShirtSize, Side, TemplateMetadata } from '../types';
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
 import { EmailModal, SummaryModal } from './OrderModals';
@@ -40,8 +40,10 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [showSummary, setShowSummary] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [templateId, setTemplateId] = useState(initialDraft.current.templateId);
-  const [templateSide, setTemplateSide] = useState<Side | undefined>(initialDraft.current.templateId ? initialDraft.current.templateSide ?? initialDraft.current.activeSide : undefined);
+  const [templateMetadata, setTemplateMetadata] = useState<Record<Side, TemplateMetadata | undefined>>(() => ({
+    front: initialDraft.current.templateMetadata?.front ?? (initialDraft.current.templateSide === 'front' || (!initialDraft.current.templateSide && initialDraft.current.activeSide === 'front') ? initialDraft.current.templateId ? { id: initialDraft.current.templateId, name: designTemplates.find((template) => template.id === initialDraft.current.templateId)?.name ?? initialDraft.current.templateId } : undefined : undefined),
+    back: initialDraft.current.templateMetadata?.back ?? (initialDraft.current.templateSide === 'back' || (!initialDraft.current.templateSide && initialDraft.current.activeSide === 'back') ? initialDraft.current.templateId ? { id: initialDraft.current.templateId, name: designTemplates.find((template) => template.id === initialDraft.current.templateId)?.name ?? initialDraft.current.templateId } : undefined : undefined),
+  }));
   const [templateConfirmation, setTemplateConfirmation] = useState<DesignTemplate | null>(null);
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const allMeasurements = [...measurements.front, ...measurements.back];
@@ -72,16 +74,17 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSaveStatus('Kaydediliyor…');
     const timer = window.setTimeout(() => {
-      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, templateId, templateSide, updatedAt: new Date().toISOString() });
+      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, templateMetadata, updatedAt: new Date().toISOString() });
       setSaveStatus(saved ? 'Taslak kaydedildi' : 'Yerel kayıt kullanılamıyor');
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [documents, options, previews, side, templateId, templateSide]);
+  }, [documents, options, previews, side, templateMetadata]);
 
-  const updateSide = (document: DesignDocument, items: ObjectMeasurement[], preview: string) => {
+  const updateSide = (document: DesignDocument, items: ObjectMeasurement[], preview: string, metadata?: TemplateMetadata) => {
     setDocuments((current) => ({ ...current, [side]: document }));
     setMeasurements((current) => ({ ...current, [side]: items }));
     setPreviews((current) => ({ ...current, [side]: preview }));
+    setTemplateMetadata((current) => ({ ...current, [side]: metadata }));
   };
   const chooseSide = (next: Side) => { setSelection(null); setHistoryState({ canUndo: false, canRedo: false }); setSide(next); };
   const upload = async (file?: File) => {
@@ -101,12 +104,12 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     skipNextSave.current = true; clearDraft(); const empty = createEmptyDraft();
     setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setPreviews({ front: '', back: '' });
     setOptions(empty.options); setSide('front'); setSelection(null); setNotice('Yerel demo taslağı temizlendi.'); setSaveStatus('Taslak temizlendi'); setDraftRevision((value) => value + 1);
-    setTemplateId(undefined); setTemplateSide(undefined); setHistoryState({ canUndo: false, canRedo: false });
+    setTemplateMetadata({ front: undefined, back: undefined }); setHistoryState({ canUndo: false, canRedo: false });
   };
   const applyTemplate = async (template: DesignTemplate) => {
     const templateDocument = cloneTemplateDocument(template);
-    await editorRef.current?.replaceDocument(templateDocument);
-    setSelection(null); setTemplateId(template.id); setTemplateSide(side); setNotice(`“${template.name}” yalnızca ${side === 'front' ? 'ön' : 'arka'} yüze uygulandı.`);
+    await editorRef.current?.replaceDocument(templateDocument, { id: template.id, name: template.name });
+    setSelection(null); setNotice(`“${template.name}” yalnızca ${side === 'front' ? 'ön' : 'arka'} yüze uygulandı.`);
   };
   const requestTemplate = (templateIdToApply: string) => {
     const template = designTemplates.find((item) => item.id === templateIdToApply);
@@ -154,7 +157,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
       {step === 'design' && <section className="studio-step design-step">
         <aside className="design-tools">
           <div className="step-panel-heading"><span>02 / TASARIM</span><h2>Fikrini yerleştir.</h2><p>Bir araç seç, sonra baskı alanında düzenle.</p></div>
-          <section className="tool-section"><h3><WandSparkles /> Tasarım şablonları</h3><div className="template-grid">{designTemplates.map((template) => <button key={template.id} className={templateId === template.id ? 'is-active' : ''} aria-pressed={templateId === template.id} onClick={() => requestTemplate(template.id)}><b>{template.name}</b><small>{template.description}</small></button>)}</div></section>
+          <section className="tool-section"><h3><WandSparkles /> Tasarım şablonları</h3><div className="template-grid">{designTemplates.map((template) => <button key={template.id} className={templateMetadata[side]?.id === template.id ? 'is-active' : ''} aria-pressed={templateMetadata[side]?.id === template.id} onClick={() => requestTemplate(template.id)}><b>{template.name}</b><small>{template.description}</small></button>)}</div></section>
           <section className="tool-section"><h3><Type /> Metin</h3><button className="tool-action" onClick={() => editorRef.current?.addText()}><Plus /> Metin ekle</button>
             {selection?.kind === 'text' && <div className="text-controls"><label>Metin<textarea value={selection.text ?? ''} onChange={(event) => editorRef.current?.updateSelected({ text: event.target.value })} /></label><div className="two-cols"><label>Yazı tipi<select value={selection.fontFamily} onChange={(event) => editorRef.current?.updateSelected({ fontFamily: event.target.value })}><option value="Arial">Sans-serif</option><option value="Georgia">Serif</option><option value="Courier New">Monospace</option><option value="Impact">Display</option></select></label><label>Punto<input type="number" min="12" max="120" value={selection.fontSize ?? 34} onChange={(event) => editorRef.current?.updateSelected({ fontSize: Number(event.target.value) })} /></label></div><div className="inline-controls"><label>Renk<input type="color" value={selection.fill ?? '#0f172a'} onChange={(event) => editorRef.current?.updateSelected({ fill: event.target.value })} /></label><button className={selection.fontWeight === 700 ? 'is-active' : ''} onClick={() => editorRef.current?.updateSelected({ fontWeight: selection.fontWeight === 700 ? 400 : 700 })} aria-label="Kalın yazı">B</button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'left' })} aria-label="Sola hizala"><AlignLeft /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'center' })} aria-label="Ortala"><AlignCenter /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'right' })} aria-label="Sağa hizala"><AlignRight /></button></div></div>}
           </section>
@@ -165,7 +168,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
         </aside>
         <div className="design-canvas">
           <div className="side-tabs" role="tablist" aria-label="Tişört yüzü"><button className={side === 'front' ? 'is-active' : ''} onClick={() => chooseSide('front')}>Ön yüz <span>{measurements.front.length}</span></button><button className={side === 'back' ? 'is-active' : ''} onClick={() => chooseSide('back')}>Arka yüz <span>{measurements.back.length}</span></button></div>
-          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} onChange={updateSide} onSelection={setSelection} onHistoryChange={setHistoryState} />} /></div>
+          <div className="editor-stage"><Mockup color={options.color} side={side} showGuide className="editor-realistic-mockup" editor={<FabricEditor key={`${side}-${draftRevision}`} ref={editorRef} side={side} document={documents[side]} template={templateMetadata[side]} onChange={updateSide} onSelection={setSelection} onHistoryChange={setHistoryState} />} /></div>
           <div className="canvas-hint"><RotateCcw /> Nesneyi seç; köşelerden ölçekle, üst noktadan döndür.</div>
           <div className="step-actions"><button className="button button--ghost" onClick={() => setStep('product')}><ArrowLeft /> Ürüne dön</button><button className="button button--ink" onClick={continueToPreview} aria-describedby={!canContinueDesign ? 'quality-blocker' : undefined}>Önizlemeye geç <ArrowRight /></button></div>
           {!canContinueDesign && <p className="quality-note" id="quality-blocker" role="alert"><Info /> {hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Nesneyi alanın içine al.' : '200 PPI altındaki görsellerle önizlemeye ve sepete ilerleyemezsin.'}</p>}
@@ -177,8 +180,8 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
         <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Kesim</dt><dd>{options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addToCartWithQualityCheck}>Sepete ekle</button><button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
       </section>}
 
-      {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateId={templateId} templateSide={templateSide} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
-      {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateId={templateId} templateSide={templateSide} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
+      {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateMetadata={templateMetadata} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
+      {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateMetadata={templateMetadata} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
       {templateConfirmation && <div className="template-confirmation-backdrop" role="presentation"><section className="template-confirmation" role="dialog" aria-modal="true" aria-labelledby="template-confirmation-title"><h2 id="template-confirmation-title">Mevcut tasarım değiştirilsin mi?</h2><p>“{templateConfirmation.name}” yalnızca aktif {side === 'front' ? 'ön' : 'arka'} yüzün içeriğini değiştirir. Diğer yüz korunur.</p><div><button className="button button--ghost" autoFocus onClick={() => { setTemplateConfirmation(null); setNotice('Şablon uygulanmadı; mevcut tasarımın korundu.'); }}>İptal</button><button className="button button--ink" onClick={() => { void applyTemplate(templateConfirmation); setTemplateConfirmation(null); }}>Şablonu uygula</button></div></section></div>}
     </main>
   );

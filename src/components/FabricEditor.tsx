@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { Canvas, FabricImage, FabricObject, Group, Textbox, loadSVGFromString, util } from 'fabric';
-import type { DesignDocument, ItemKind, ObjectMeasurement, Side } from '../types';
+import type { DesignDocument, ItemKind, ObjectMeasurement, Side, TemplateMetadata } from '../types';
 import { round } from '../lib/pricing';
 import { qualityForPpi, validateDimensions } from '../lib/imageValidation';
 import { disposeFabricCanvas } from '../lib/fabricLifecycle';
@@ -42,14 +42,15 @@ export interface EditorHandle {
   redo: () => void;
   alignHorizontal: () => void;
   alignVertical: () => void;
-  replaceDocument: (document: DesignDocument) => Promise<void>;
+  replaceDocument: (document: DesignDocument, template?: TemplateMetadata) => Promise<void>;
   exportImage: () => string;
 }
 
 interface Props {
   side: Side;
   document: DesignDocument;
-  onChange: (document: DesignDocument, measurements: ObjectMeasurement[], preview: string) => void;
+  template?: TemplateMetadata;
+  onChange: (document: DesignDocument, measurements: ObjectMeasurement[], preview: string, template?: TemplateMetadata) => void;
   onSelection: (selection: SelectionInfo | null) => void;
   onHistoryChange: (history: { canUndo: boolean; canRedo: boolean }) => void;
 }
@@ -95,14 +96,15 @@ function keepInside(canvas: Canvas, object: MetaObject) {
   object.setCoords(); canvas.requestRenderAll();
 }
 
-export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEditor({ side, document, onChange, onSelection, onHistoryChange }, ref) {
+export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEditor({ side, document, template, onChange, onSelection, onHistoryChange }, ref) {
   const elementRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<Canvas | null>(null);
   const pendingSymbolsRef = useRef(new Set<string>());
   const readyRef = useRef(false);
   const restoringRef = useRef(false);
   const initialDocumentRef = useRef(document);
-  const historyRef = useRef(createHistory(document));
+  const initialTemplateRef = useRef(template);
+  const historyRef = useRef(createHistory(document, template));
   const callbacksRef = useRef({ onChange, onSelection, onHistoryChange });
   callbacksRef.current = { onChange, onSelection, onHistoryChange };
 
@@ -110,14 +112,14 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
   const snapshot = () => {
     const canvas = canvasRef.current;
     if (!canvas || !readyRef.current || restoringRef.current) return;
-    historyRef.current = writeHistory(historyRef.current, canvas.toJSON() as DesignDocument);
+    historyRef.current = writeHistory(historyRef.current, canvas.toJSON() as DesignDocument, historyRef.current.present.template);
     notifyHistory();
   };
   const notify = () => {
     const canvas = canvasRef.current;
     if (!canvas || !readyRef.current || restoringRef.current) return;
     const objects = canvas.getObjects() as MetaObject[];
-    callbacksRef.current.onChange(canvas.toJSON() as DesignDocument, objects.map((object) => getMeasurement(object, side)), canvas.toDataURL({ format: 'png', multiplier: 1 }));
+    callbacksRef.current.onChange(canvas.toJSON() as DesignDocument, objects.map((object) => getMeasurement(object, side)), canvas.toDataURL({ format: 'png', multiplier: 1 }), historyRef.current.present.template);
   };
   const notifyRef = useRef(notify);
   const snapshotRef = useRef(snapshot);
@@ -176,7 +178,7 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       readyRef.current = true;
       canvas.getObjects().forEach((object) => keepInside(canvas, object as MetaObject));
       canvas.renderAll();
-      historyRef.current = createHistory(canvas.toJSON() as DesignDocument);
+      historyRef.current = createHistory(canvas.toJSON() as DesignDocument, initialTemplateRef.current);
       notifyHistory();
       notifyRef.current();
     }).catch((error: unknown) => {
@@ -276,13 +278,13 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
       const rect = object.getBoundingRect(); const target = alignObjectCenter(rect, 'vertical', CANVAS_WIDTH, CANVAS_HEIGHT);
       object.set({ top: (object.top ?? 0) + target.top - rect.top }); keepInside(canvas, object); canvas.fire('object:modified', { target: object });
     },
-    replaceDocument: async (nextDocument) => {
+    replaceDocument: async (nextDocument, nextTemplate) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const nextHistory = writeHistory(historyRef.current, nextDocument);
+      const nextHistory = writeHistory(historyRef.current, nextDocument, nextTemplate);
       historyRef.current = nextHistory;
       notifyHistory();
-      await restore(nextHistory.present);
+      await restore(nextHistory.present.document);
     },
     exportImage: () => canvasRef.current?.toDataURL({ format: 'png', multiplier: 2 }) ?? '',
   }));

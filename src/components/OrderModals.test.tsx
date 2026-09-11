@@ -14,13 +14,13 @@ const props = {
 
 describe('order template metadata', () => {
   it('renders the template name with only its recorded side', () => {
-    const markup = renderToStaticMarkup(<SummaryModal {...props} templateId="big-heading" templateSide="front" />);
-    expect(markup).toContain('Ön yüz: Büyük Başlık');
-    expect(markup).not.toContain('Arka yüz: Büyük Başlık');
+    const markup = renderToStaticMarkup(<SummaryModal {...props} templateMetadata={{ front: { id: 'big-heading', name: 'Büyük Başlık' } }} />);
+    expect(markup).toContain('Büyük Başlık');
+    expect(markup).toContain('Özel tasarım');
   });
 
   it('uses a safe custom-design label for old or empty metadata', () => {
     expect(renderToStaticMarkup(<SummaryModal {...props} />)).toContain('Özel tasarım');
-    expect(renderToStaticMarkup(<SummaryModal {...props} templateId="missing-template" templateSide="back" />)).toContain('Özel tasarım');
+    expect(renderToStaticMarkup(<SummaryModal {...props} templateMetadata={{ back: undefined }} />)).toContain('Özel tasarım');
   });
 });
