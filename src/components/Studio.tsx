@@ -4,13 +4,15 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { colorHex, colorNames, emptyDesign } from '../data/products';
+import { cloneTemplateDocument, designTemplates } from '../data/designTemplates';
 import { symbols } from '../data/symbols';
 import { clearDraft, createEmptyDraft, loadDraft, saveDraft } from '../lib/draftStorage';
 import { calculatePrice, formatTRY } from '../lib/pricing';
 import { designHash } from '../lib/designIdentity';
+import { applyTemplateToActiveSide, sideHasDesignContent } from '../lib/templateApplication';
 import { uploadIssueMessage, validateUploadFile } from '../lib/imageValidation';
 import { canContinue, hasOverflow } from '../lib/qualityGate';
-import type { CartItem, DesignDocument, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtSize, Side } from '../types';
+import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, ShirtSize, Side } from '../types';
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
 import { EmailModal, SummaryModal } from './OrderModals';
@@ -38,13 +40,15 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [showSummary, setShowSummary] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [templateId, setTemplateId] = useState(initialDraft.current.templateId);
+  const [templateConfirmation, setTemplateConfirmation] = useState<DesignTemplate | null>(null);
   const allMeasurements = [...measurements.front, ...measurements.back];
   const hasOverflowDesign = hasOverflow(allMeasurements);
   const canContinueDesign = canContinue(allMeasurements);
   const price = calculatePrice(options.quantity, measurements.front.length > 0, measurements.back.length > 0);
   const orderId = useMemo(() => `TL-${String(Math.floor(1000 + Math.random() * 9000))}`, []);
   const addCustomDesignToCart = () => {
-    const hash = designHash(documents);
+    const hash = designHash(documents, options.fit);
     onAdd({
       id: `custom-${hash}-${options.color}-${options.size}`,
       designHash: hash,
@@ -52,6 +56,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
       name: 'Kendin Tasarla',
       color: options.color,
       size: options.size,
+      fit: options.fit,
       quantity: options.quantity,
       unitPrice: Math.round(price.total / options.quantity),
       artwork: 'typography',
@@ -65,11 +70,11 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSaveStatus('Kaydediliyor…');
     const timer = window.setTimeout(() => {
-      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, updatedAt: new Date().toISOString() });
+      const saved = saveDraft({ schemaVersion: 2, documents, options, activeSide: side, previews, templateId, updatedAt: new Date().toISOString() });
       setSaveStatus(saved ? 'Taslak kaydedildi' : 'Yerel kayıt kullanılamıyor');
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [documents, options, previews, side]);
+  }, [documents, options, previews, side, templateId]);
 
   const updateSide = (document: DesignDocument, items: ObjectMeasurement[], preview: string) => {
     setDocuments((current) => ({ ...current, [side]: document }));
@@ -94,6 +99,19 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     skipNextSave.current = true; clearDraft(); const empty = createEmptyDraft();
     setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setPreviews({ front: '', back: '' });
     setOptions(empty.options); setSide('front'); setSelection(null); setNotice('Yerel demo taslağı temizlendi.'); setSaveStatus('Taslak temizlendi'); setDraftRevision((value) => value + 1);
+    setTemplateId(undefined);
+  };
+  const applyTemplate = (template: DesignTemplate) => {
+    setDocuments((current) => applyTemplateToActiveSide(current, side, cloneTemplateDocument(template)));
+    setMeasurements((current) => ({ ...current, [side]: [] }));
+    setPreviews((current) => ({ ...current, [side]: '' }));
+    setSelection(null); setTemplateId(template.id); setNotice(`“${template.name}” yalnızca ${side === 'front' ? 'ön' : 'arka'} yüze uygulandı.`); setDraftRevision((value) => value + 1);
+  };
+  const requestTemplate = (templateIdToApply: string) => {
+    const template = designTemplates.find((item) => item.id === templateIdToApply);
+    if (!template) return;
+    if (sideHasDesignContent(documents[side])) { setTemplateConfirmation(template); return; }
+    applyTemplate(template);
   };
   const continueToPreview = () => {
     if (!canContinueDesign) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Önizlemeye geçmeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
@@ -104,7 +122,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     setStep(next);
   };
   const addToCartWithQualityCheck = () => {
-    if (!canContinue) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Sepete eklemeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
+    if (!canContinueDesign) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Sepete eklemeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
     addCustomDesignToCart();
   };
 
@@ -122,8 +140,9 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
       {step === 'product' && <section className="studio-step product-step">
         <div className="step-copy"><span className="editorial-index">01 / ÜRÜN</span><h1>Tuvalini seç.</h1><p>Renk, beden ve adedi belirle. Tasarımın ön ve arka yüz için aynı 30 × 40 cm üretim alanını kullanır.</p>
           <div className="product-step-controls">
-            <fieldset><legend>Tişört rengi — <b>{colorNames[options.color]}</b></legend><div className="shirt-colors">{(['white','black','beige','purple'] as ShirtColor[]).map((color) => <button key={color} className={options.color === color ? 'is-active' : ''} onClick={() => setOptions({ ...options, color })}><i style={{ background: colorHex[color] }} />{colorNames[color]}</button>)}</div></fieldset>
-            <fieldset><legend>Beden</legend><div className="sizes">{(['S','M','L','XL'] as ShirtSize[]).map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></fieldset>
+            <fieldset><legend>Kesim</legend><div className="sizes">{(['slim','oversize'] as ShirtFit[]).map((fit) => <button key={fit} className={options.fit === fit ? 'is-active' : ''} onClick={() => setOptions({ ...options, fit })}>{fit === 'slim' ? 'Slim fit' : 'Oversize'}</button>)}</div></fieldset>
+            <fieldset><legend>Tişört rengi — <b>{colorNames[options.color]}</b></legend><div className="shirt-colors">{(['white','black'] as ShirtColor[]).map((color) => <button key={color} className={options.color === color ? 'is-active' : ''} onClick={() => setOptions({ ...options, color })}><i style={{ background: colorHex[color] }} />{colorNames[color]}</button>)}</div></fieldset>
+            <fieldset><legend>Beden</legend><div className="sizes">{(['S','M','L','XL','XXL'] as ShirtSize[]).map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></fieldset>
             <fieldset><legend>Adet</legend><div className="stepper"><button onClick={() => setOptions({ ...options, quantity: Math.max(1, options.quantity - 1) })} aria-label="Adedi azalt"><Minus /></button><input aria-label="Adet" type="number" min="1" max="50" value={options.quantity} onChange={(event) => setOptions({ ...options, quantity: Math.min(50, Math.max(1, Number(event.target.value))) })} /><button onClick={() => setOptions({ ...options, quantity: Math.min(50, options.quantity + 1) })} aria-label="Adedi artır"><Plus /></button></div></fieldset>
           </div>
           <button className="button button--ink" onClick={() => setStep('design')}>Tasarıma geç <ArrowRight /></button>
@@ -134,6 +153,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
       {step === 'design' && <section className="studio-step design-step">
         <aside className="design-tools">
           <div className="step-panel-heading"><span>02 / TASARIM</span><h2>Fikrini yerleştir.</h2><p>Bir araç seç, sonra baskı alanında düzenle.</p></div>
+          <section className="tool-section"><h3><WandSparkles /> Tasarım şablonları</h3><div className="template-grid">{designTemplates.map((template) => <button key={template.id} className={templateId === template.id ? 'is-active' : ''} aria-pressed={templateId === template.id} onClick={() => requestTemplate(template.id)}><b>{template.name}</b><small>{template.description}</small></button>)}</div></section>
           <section className="tool-section"><h3><Type /> Metin</h3><button className="tool-action" onClick={() => editorRef.current?.addText()}><Plus /> Metin ekle</button>
             {selection?.kind === 'text' && <div className="text-controls"><label>Metin<textarea value={selection.text ?? ''} onChange={(event) => editorRef.current?.updateSelected({ text: event.target.value })} /></label><div className="two-cols"><label>Yazı tipi<select value={selection.fontFamily} onChange={(event) => editorRef.current?.updateSelected({ fontFamily: event.target.value })}><option value="Arial">Sans-serif</option><option value="Georgia">Serif</option><option value="Courier New">Monospace</option><option value="Impact">Display</option></select></label><label>Punto<input type="number" min="12" max="120" value={selection.fontSize ?? 34} onChange={(event) => editorRef.current?.updateSelected({ fontSize: Number(event.target.value) })} /></label></div><div className="inline-controls"><label>Renk<input type="color" value={selection.fill ?? '#0f172a'} onChange={(event) => editorRef.current?.updateSelected({ fill: event.target.value })} /></label><button className={selection.fontWeight === 700 ? 'is-active' : ''} onClick={() => editorRef.current?.updateSelected({ fontWeight: selection.fontWeight === 700 ? 400 : 700 })} aria-label="Kalın yazı">B</button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'left' })} aria-label="Sola hizala"><AlignLeft /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'center' })} aria-label="Ortala"><AlignCenter /></button><button onClick={() => editorRef.current?.updateSelected({ textAlign:'right' })} aria-label="Sağa hizala"><AlignRight /></button></div></div>}
           </section>
@@ -158,6 +178,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
 
       {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}
       {showEmail && <EmailModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} onClose={() => { setShowEmail(false); setShowSummary(false); }} />}
+      {templateConfirmation && <div className="template-confirmation-backdrop" role="presentation"><section className="template-confirmation" role="dialog" aria-modal="true" aria-labelledby="template-confirmation-title"><h2 id="template-confirmation-title">Mevcut tasarım değiştirilsin mi?</h2><p>“{templateConfirmation.name}” yalnızca aktif {side === 'front' ? 'ön' : 'arka'} yüzün içeriğini değiştirir. Diğer yüz korunur.</p><div><button className="button button--ghost" autoFocus onClick={() => { setTemplateConfirmation(null); setNotice('Şablon uygulanmadı; mevcut tasarımın korundu.'); }}>İptal</button><button className="button button--ink" onClick={() => { applyTemplate(templateConfirmation); setTemplateConfirmation(null); }}>Şablonu uygula</button></div></section></div>}
     </main>
   );
 }

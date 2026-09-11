@@ -6,7 +6,7 @@ const STORAGE_KEY = 'teelab.demo.draft.v1';
 export const createEmptyDraft = (): SavedDraft => ({
   schemaVersion: 2,
   documents: { front: emptyDesign(), back: emptyDesign() },
-  options: { color: 'white', size: 'M', quantity: 1 },
+  options: { color: 'white', size: 'M', fit: 'slim', quantity: 1 },
   activeSide: 'front',
   previews: { front: '', back: '' },
   updatedAt: new Date().toISOString(),
@@ -18,7 +18,7 @@ export function loadDraft(): SavedDraft {
     if (!raw) return createEmptyDraft();
     const value = JSON.parse(raw) as Partial<SavedDraft>;
     if (![1, 2].includes(value.schemaVersion ?? 0) || !value.documents?.front || !value.documents?.back || !value.options) return createEmptyDraft();
-    return { ...createEmptyDraft(), ...value, schemaVersion: 2 } as SavedDraft;
+    return { ...createEmptyDraft(), ...value, options: { ...createEmptyDraft().options, ...value.options }, schemaVersion: 2 } as SavedDraft;
   } catch {
     return createEmptyDraft();
   }

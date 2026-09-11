@@ -3,6 +3,7 @@ import { Canvas, FabricImage, FabricObject, Group, Textbox, loadSVGFromString, u
 import type { DesignDocument, ItemKind, ObjectMeasurement, Side } from '../types';
 import { round } from '../lib/pricing';
 import { qualityForPpi, validateDimensions } from '../lib/imageValidation';
+import { disposeFabricCanvas } from '../lib/fabricLifecycle';
 
 export const CANVAS_WIDTH = 360;
 export const CANVAS_HEIGHT = 480;
@@ -131,12 +132,17 @@ export const FabricEditor = forwardRef<EditorHandle, Props>(function FabricEdito
     canvas.on('selection:updated', select);
     canvas.on('selection:cleared', () => callbacksRef.current.onSelection(null));
 
-    canvas.loadFromJSON(initialDocumentRef.current).then(() => {
+    let disposed = false;
+    const loadController = new AbortController();
+    canvas.loadFromJSON(initialDocumentRef.current, undefined, { signal: loadController.signal }).then(() => {
+      if (disposed || canvas.destroyed) return;
       readyRef.current = true;
       canvas.getObjects().forEach((object) => keepInside(canvas, object as MetaObject));
       canvas.renderAll(); notify();
+    }).catch((error: unknown) => {
+      if (!disposed) throw error;
     });
-    return () => { readyRef.current = false; canvas.dispose(); canvasRef.current = null; };
+    return () => { disposed = true; readyRef.current = false; disposeFabricCanvas(canvas, loadController); canvasRef.current = null; };
   }, [side]);
 
   const addObject = (object: MetaObject) => {

@@ -1,6 +1,7 @@
 export type Side = 'front' | 'back';
 export type ShirtColor = 'white' | 'black' | 'beige' | 'purple';
-export type ShirtSize = 'S' | 'M' | 'L' | 'XL';
+export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL';
+export type ShirtFit = 'slim' | 'oversize';
 export type ItemKind = 'text' | 'symbol' | 'image';
 
 export interface Product {
@@ -19,6 +20,7 @@ export interface CartItem {
   name: string;
   color: ShirtColor;
   size: ShirtSize;
+  fit?: ShirtFit;
   quantity: number;
   unitPrice: number;
   artwork: Product['artwork'];
@@ -34,6 +36,13 @@ export interface DesignDocument {
 export interface DesignSides {
   front: DesignDocument;
   back: DesignDocument;
+}
+
+export interface DesignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  document: DesignDocument;
 }
 
 export interface ObjectMeasurement {
@@ -56,6 +65,7 @@ export interface ObjectMeasurement {
 export interface OrderOptions {
   color: ShirtColor;
   size: ShirtSize;
+  fit: ShirtFit;
   quantity: number;
 }
 
@@ -87,4 +97,5 @@ export interface SavedDraft {
   activeSide: Side;
   previews?: PreviewImages;
   updatedAt: string;
+  templateId?: string;
 }
