@@ -83,4 +83,4 @@ Yok; önce RCA-001 kanıtı tamamlanmalı.
 
 ## 18. Açık/BLOCKED maddeler
 
-RCA-001 nedeniyle karar BLOCKED. Uygulama kodu değiştirilmedi.
+RCA-001 nedeniyle karar BLOCKED. Fresh browser context denemesinde yeni in-app browser sekmesi mevcut localStorage sepetini paylaştı ve `36 ürün` gösterdi; bu nedenle fresh/incognito kanıtı üretmedi. Mevcut kullanıcı sepeti silinmedi. Uygulama kodu değiştirilmedi.
