@@ -7,24 +7,10 @@ import { Logo } from './components/Logo';
 import { ProductDetail } from './components/ProductDetail';
 import { products } from './data/products';
 import type { CartItem } from './types';
-import { mergeCartItem } from './lib/cart';
+import { CART_STORAGE_KEY, deserializeCart, mergeCartItem, serializeCart, updateCartQuantity } from './lib/cart';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
-const CART_KEY = 'teelab-demo-cart-v1';
-
-function readCart(): CartItem[] {
-  try {
-    const value = window.localStorage.getItem(CART_KEY);
-    if (!value) return [];
-    const items = JSON.parse(value) as Partial<CartItem>[];
-    return items.filter((item) => item.id && item.productId && item.color && item.size).map((item) => ({
-      ...item,
-      designHash: item.designHash ?? `catalog:${item.artwork ?? 'legacy'}`,
-    } as CartItem));
-  } catch {
-    return [];
-  }
-}
+const readCart = () => deserializeCart(window.localStorage.getItem(CART_STORAGE_KEY));
 
 function ScrollManager() {
   const location = useLocation();
@@ -75,14 +61,14 @@ export default function App() {
   const cartCount = useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
   useEffect(() => {
-    try { window.localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch { /* Demo sepeti depolama olmadan da çalışır. */ }
+    try { window.localStorage.setItem(CART_STORAGE_KEY, serializeCart(cart)); } catch { /* Demo sepeti depolama olmadan da çalışır. */ }
   }, [cart]);
 
   const addToCart = (next: CartItem) => {
     setCart((current) => mergeCartItem(current, next));
   };
 
-  const updateQuantity = (id: string, quantity: number) => setCart((current) => current.map((item) => item.id === id ? { ...item, quantity } : item).filter((item) => item.quantity > 0));
+  const updateQuantity = (id: string, quantity: number) => setCart((current) => updateCartQuantity(current, id, quantity));
 
   return (
     <div className="app-shell">
@@ -92,7 +78,7 @@ export default function App() {
         <Route path="/" element={<Catalog onCustomize={() => navigate('/studio')} onProduct={(product) => navigate(`/koleksiyon/${product.id}`)} />} />
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
         <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
-        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onContinue={() => navigate('/')} />} />
+        <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onComplete={() => setCart([])} onContinue={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!isStudio && <footer>
