@@ -12,7 +12,14 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
     { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, name: 'İyi Fikir', meta: 'TeeLab Stüdyo için üretim öncesi baskı yerleşimi örneği.', label: 'Beyaz tişört üzerinde İyi Fikir tasarımı.' },
   ];
   const [activeBanner, setActiveBanner] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const respectMotionPreference = () => { if (media.matches) setIsPlaying(false); };
+    media.addEventListener('change', respectMotionPreference);
+    return () => media.removeEventListener('change', respectMotionPreference);
+  }, []);
 
   useEffect(() => {
     if (!isPlaying) return;
