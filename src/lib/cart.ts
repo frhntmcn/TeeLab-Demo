@@ -18,7 +18,7 @@ export function deserializeCart(raw: string | null): CartItem[] {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isCartItem).map((item) => ({ ...item, quantity: Math.min(MAX_CART_QUANTITY, Math.floor(item.quantity)) }));
+    return parsed.filter(isCartItem).filter((item) => Math.floor(item.quantity) >= 1).map((item) => ({ ...item, quantity: Math.min(MAX_CART_QUANTITY, Math.floor(item.quantity)) }));
   } catch {
     return [];
   }

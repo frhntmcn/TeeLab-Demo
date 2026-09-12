@@ -27,6 +27,9 @@ describe('mergeCartItem', () => {
     expect(deserializeCart(serializeCart(cart))).toEqual(cart);
     expect(deserializeCart('{broken')).toEqual([]);
     expect(deserializeCart(JSON.stringify([{ id: 'missing-fields' }]))).toEqual([]);
+    expect(deserializeCart(JSON.stringify([{ ...item('d-fractional'), quantity: 0.5 }]))).toEqual([]);
+    expect(deserializeCart(JSON.stringify([{ ...item('d-zero'), quantity: 0 }, { ...item('d-nan'), quantity: null }]))).toEqual([]);
+    expect(deserializeCart(JSON.stringify([{ ...item('d-large'), quantity: 99 }]))[0].quantity).toBe(25);
   });
 
   it('recalculates the subtotal from each cart update', () => {
