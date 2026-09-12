@@ -32,13 +32,13 @@ export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product
         </div>
         <section className="detail-panel">
           <span className="eyebrow">TEELAB / KOLEKSİYON</span><h1>{product.name}</h1><p className="detail-lead">{product.description} 220 gr premium penye kumaş ve kalıcı DTG baskı.</p>
-          <strong className="detail-price">{formatTRY(product.price * quantity)}</strong>
-          <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button key={item} className={`color-option ${color === item ? 'is-active' : ''}`} onClick={() => setColor(item)} aria-label={colorNames[item]} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
-          <fieldset><legend>Beden</legend><div className="option-row">{(['S','M','L','XL'] as ShirtSize[]).map((item) => <button key={item} className={`size-option ${size === item ? 'is-active' : ''}`} onClick={() => setSize(item)}>{item}</button>)}</div></fieldset>
+          <strong className="detail-price" aria-live="polite">{formatTRY(product.price * quantity)} <small>{quantity > 1 ? `${quantity} adet` : '1 adet'}</small></strong>
+          <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button type="button" key={item} className={`color-option ${color === item ? 'is-active' : ''}`} onClick={() => setColor(item)} aria-label={`${colorNames[item]}${color === item ? ', seçili' : ''}`} aria-pressed={color === item} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
+          <fieldset><legend>Beden — <b>{size}</b></legend><div className="option-row">{(['S','M','L','XL','XXL'] as ShirtSize[]).map((item) => <button type="button" key={item} className={`size-option ${size === item ? 'is-active' : ''}`} onClick={() => setSize(item)} aria-pressed={size === item}>{item}</button>)}</div></fieldset>
           <label className="quantity-field">Adet <span><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Adedi azalt">−</button><b>{quantity}</b><button onClick={() => setQuantity(Math.min(25, quantity + 1))} aria-label="Adedi artır">+</button></span></label>
           <button className="button button--primary button--wide" onClick={add}><ShoppingBag size={18} /> Sepete Ekle</button>
-          {added && <div className="toast"><CheckCircle2 size={18} /> Demo sepetine eklendi.</div>}
-          <button className="customize-link" onClick={onCustomize}>Bu tasarımı kendine göre özelleştir →</button>
+          {added && <div className="toast" role="status"><CheckCircle2 size={18} /> Demo sepetine eklendi. Sepetteki ürünlerini kontrol edebilirsin.</div>}
+          <button className="customize-link" onClick={onCustomize}>Bu tasarımı kendine göre özelleştir <span>Studio’da ön ve arka yüzü düzenle →</span></button>
           <ul className="feature-list"><li><CheckCircle2 size={17} /> 220 gr premium pamuk</li><li><CheckCircle2 size={17} /> Su bazlı, canlı DTG baskı</li><li><CheckCircle2 size={17} /> 2–4 iş gününde üretim</li></ul>
           <details className="trust-details"><summary>Beden tablosu</summary><div className="size-table"><span>Beden</span><b>S</b><b>M</b><b>L</b><b>XL</b><span>Göğüs</span><em>50 cm</em><em>53 cm</em><em>56 cm</em><em>59 cm</em><span>Boy</span><em>68 cm</em><em>71 cm</em><em>74 cm</em><em>77 cm</em></div></details>
           <details className="trust-details"><summary>Kargo ve iade</summary><p>Demo politikası: 2–4 iş gününde üretim, ardından takipli gönderim. Kişiye özel baskılı ürünlerde üretim hatası dışındaki iadeler gerçek mağaza koşullarına göre değerlendirilir.</p></details>

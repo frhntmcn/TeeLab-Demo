@@ -7,9 +7,9 @@ import { ShirtVisual } from './Artwork';
 
 export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; onProduct: (product: Product) => void }) {
   const banners = [
-    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', color: 'black' as const, artwork: 'orbit' as const, label: 'Siyah tişört üzerinde Gece Yörüngesi tasarımı için kampanya görseli alanı.' },
-    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', color: 'beige' as const, artwork: 'anatolia' as const, label: 'Ön ve arka baskı fikrini anlatacak kampanya görseli alanı.' },
-    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, label: 'Beyaz tişört ve tasarım detayı için kampanya görseli alanı.' },
+    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', color: 'black' as const, artwork: 'orbit' as const, name: 'Gece Yörüngesi', meta: 'Ön ve arka yüzüyle tasarlanmış TeeLab koleksiyon görünümü.', label: 'Siyah tişört üzerinde Gece Yörüngesi tasarımı.' },
+    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', color: 'beige' as const, artwork: 'anatolia' as const, name: 'Anadolu Form', meta: 'TeeLab koleksiyonundaki ön ve arka baskı görünümü.', label: 'Bej tişört üzerinde Anadolu Form tasarımı.' },
+    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, name: 'İyi Fikir', meta: 'TeeLab Stüdyo için üretim öncesi baskı yerleşimi örneği.', label: 'Beyaz tişört üzerinde İyi Fikir tasarımı.' },
   ];
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -28,7 +28,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
       <section className="home-hero" aria-roledescription="carousel" aria-label="TeeLab tanıtımı">
         <div className="home-hero__copy">
           <span className="editorial-index">TEELAB / 2026 — İSTANBUL</span>
-          <p className="hero-slide-status" aria-live="polite">{activeBanner + 1} / {banners.length}</p>
+          <p className="hero-slide-status" aria-live="polite">{activeBanner + 1} / {banners.length} · {banner.name}</p>
           <h1>{banner.title}</h1>
           <p>{banner.copy}</p>
           <div className="home-hero__actions">
@@ -38,13 +38,13 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           <div className="hero-controls" aria-label="Hero içerik kontrolleri">
             <button type="button" aria-label="Önceki banner" onClick={() => chooseBanner((activeBanner + banners.length - 1) % banners.length)}><ArrowLeft size={16} /></button>
             <div className="hero-dots">{banners.map((item, index) => <button key={index} type="button" aria-label={`${index + 1}. banner: ${item.copy}`} aria-current={index === activeBanner ? 'true' : undefined} className={index === activeBanner ? 'is-active' : ''} onClick={() => chooseBanner(index)}><span /></button>)}</div>
-            <button type="button" aria-label={isPlaying ? 'Otomatik geçişi durdur' : 'Otomatik geçişi başlat'} onClick={() => setIsPlaying((playing) => !playing)}>{isPlaying ? <Pause size={15} /> : <Play size={15} />}</button>
+            <button type="button" aria-label={isPlaying ? 'Otomatik geçişi durdur' : 'Otomatik geçişi başlat'} aria-pressed={!isPlaying} onClick={() => setIsPlaying((playing) => !playing)}>{isPlaying ? <Pause size={15} /> : <Play size={15} />}</button>
             <button type="button" aria-label="Sonraki banner" onClick={() => chooseBanner((activeBanner + 1) % banners.length)}><ArrowRight size={16} /></button>
           </div>
         </div>
         <div className="home-hero__visual" key={activeBanner}>
           <ShirtVisual color={banner.color} artwork={banner.artwork} label={banner.label} />
-          <div className="home-hero__meta"><span>KAMPANYA GÖRSELİ YERİNE MOCKUP</span><b>{activeBanner === 0 ? 'Gece Yörüngesi' : activeBanner === 1 ? 'Anadolu Form' : 'İyi Fikir'}</b><small>Gelecekte insan odaklı kampanya varlığıyla değiştirilecek.</small></div>
+          <div className="home-hero__meta"><span>TEELAB KOLEKSİYON</span><b>{banner.name}</b><small>{banner.meta}</small></div>
         </div>
       </section>
 
@@ -81,7 +81,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
               </div>
               <div className="editorial-product__footer">
                 <div className="swatches" aria-label="Renk seçenekleri">{product.colors.map((color) => <span key={color} title={colorNames[color]} style={{ background: colorHex[color] }} />)}</div>
-                <button onClick={() => onProduct(product)}>Ürünü incele <ArrowRight size={15} /></button>
+                <button onClick={() => onProduct(product)}>Ürünü İncele <ArrowRight size={15} /></button>
               </div>
             </article>
           ))}
