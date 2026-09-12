@@ -12,7 +12,8 @@ import { designHash } from '../lib/designIdentity';
 import { sideHasDesignContent } from '../lib/templateApplication';
 import { uploadIssueMessage, validateUploadFile } from '../lib/imageValidation';
 import { canContinue, hasOverflow } from '../lib/qualityGate';
-import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, ShirtSize, Side, TemplateMetadata } from '../types';
+import { AVAILABLE_SHIRT_SIZES, clampOrderQuantity, MAX_ORDER_QUANTITY } from '../lib/orderOptions';
+import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, Side, TemplateMetadata } from '../types';
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
 import { EmailModal, SummaryModal } from './OrderModals';
@@ -35,6 +36,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [options, setOptions] = useState<OrderOptions>(initialDraft.current.options);
   const [notice, setNotice] = useState('');
+  const [cartAdded, setCartAdded] = useState(false);
   const [saveStatus, setSaveStatus] = useState('Taslak tarayıcıda saklanır');
   const [draftRevision, setDraftRevision] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -53,21 +55,23 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const orderId = useMemo(() => `TL-${String(Math.floor(1000 + Math.random() * 9000))}`, []);
   const addCustomDesignToCart = () => {
     const hash = designHash(documents, options.fit);
-    onAdd({
-      id: `custom-${hash}-${options.color}-${options.size}`,
-      designHash: hash,
-      productId: 'custom-design',
-      name: 'Kendin Tasarla',
-      color: options.color,
-      size: options.size,
-      fit: options.fit,
-      quantity: options.quantity,
-      unitPrice: Math.round(price.total / options.quantity),
-      artwork: 'typography',
-      designPreview: previews.front || previews.back || undefined,
-      isCustom: true,
-    });
-    setNotice('Özel tasarım sepete eklendi.');
+    try {
+      onAdd({
+        id: `custom-${hash}-${options.color}-${options.size}`,
+        designHash: hash,
+        productId: 'custom-design',
+        name: 'Kendin Tasarla',
+        color: options.color,
+        size: options.size,
+        fit: options.fit,
+        quantity: options.quantity,
+        unitPrice: Math.round(price.total / options.quantity),
+        artwork: 'typography',
+        designPreview: previews.front || previews.back || undefined,
+        isCustom: true,
+      });
+      setCartAdded(true);
+    } catch { setCartAdded(false); setNotice('Tasarım sepete eklenemedi. Tekrar dene.'); }
   };
 
   useEffect(() => {
@@ -146,8 +150,8 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
           <div className="product-step-controls">
             <fieldset><legend>Kesim</legend><div className="sizes">{(['slim','oversize'] as ShirtFit[]).map((fit) => <button key={fit} className={options.fit === fit ? 'is-active' : ''} onClick={() => setOptions({ ...options, fit })}>{fit === 'slim' ? 'Slim fit' : 'Oversize'}</button>)}</div></fieldset>
             <fieldset><legend>Tişört rengi — <b>{colorNames[options.color]}</b></legend><div className="shirt-colors">{(['white','black'] as ShirtColor[]).map((color) => <button key={color} className={options.color === color ? 'is-active' : ''} onClick={() => setOptions({ ...options, color })}><i style={{ background: colorHex[color] }} />{colorNames[color]}</button>)}</div></fieldset>
-            <fieldset><legend>Beden</legend><div className="sizes">{(['S','M','L','XL','XXL'] as ShirtSize[]).map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></fieldset>
-            <fieldset><legend>Adet</legend><div className="stepper"><button onClick={() => setOptions({ ...options, quantity: Math.max(1, options.quantity - 1) })} aria-label="Adedi azalt"><Minus /></button><input aria-label="Adet" type="number" min="1" max="50" value={options.quantity} onChange={(event) => setOptions({ ...options, quantity: Math.min(50, Math.max(1, Number(event.target.value))) })} /><button onClick={() => setOptions({ ...options, quantity: Math.min(50, options.quantity + 1) })} aria-label="Adedi artır"><Plus /></button></div></fieldset>
+            <fieldset><legend>Beden</legend><div className="sizes">{AVAILABLE_SHIRT_SIZES.map((size) => <button key={size} className={options.size === size ? 'is-active' : ''} onClick={() => setOptions({ ...options, size })}>{size}</button>)}</div></fieldset>
+            <fieldset><legend>Adet</legend><div className="stepper"><button onClick={() => setOptions({ ...options, quantity: clampOrderQuantity(options.quantity - 1) })} aria-label="Adedi azalt"><Minus /></button><input aria-label="Adet" type="number" min="1" max={MAX_ORDER_QUANTITY} value={options.quantity} onChange={(event) => setOptions({ ...options, quantity: clampOrderQuantity(Number(event.target.value)) })} /><button onClick={() => setOptions({ ...options, quantity: clampOrderQuantity(options.quantity + 1) })} aria-label="Adedi artır"><Plus /></button></div></fieldset>
           </div>
           <button className="button button--ink" onClick={() => setStep('design')}>Tasarıma geç <ArrowRight /></button>
         </div>
@@ -177,7 +181,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
 
       {step === 'preview' && <section className="studio-step preview-step">
         <div className="preview-gallery"><div><span>ÖN / {measurements.front.length} NESNE</span><Mockup color={options.color} side="front" designUrl={previews.front} /></div><div><span>ARKA / {measurements.back.length} NESNE</span><Mockup color={options.color} side="back" designUrl={previews.back} /></div></div>
-        <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Kesim</dt><dd>{options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addToCartWithQualityCheck}>Sepete ekle</button><button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
+        <aside className="preview-summary"><span className="editorial-index">03 / ÖNİZLEME</span><h1>Son bir bakış.</h1><p>Mockup sunum içindir; üretim koordinatları 30 × 40 cm baskı state’inden ayrı hesaplanır.</p><dl><div><dt>Renk</dt><dd>{colorNames[options.color]}</dd></div><div><dt>Kesim</dt><dd>{options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</dd></div><div><dt>Beden / Adet</dt><dd>{options.size} / {options.quantity}</dd></div><div><dt>Ön / Arka</dt><dd>{measurements.front.length} / {measurements.back.length} nesne</dd></div></dl><div className="preview-total"><span>Tahmini toplam</span><strong>{formatTRY(price.total)}</strong></div><small>Demo tahminidir; gerçek üretim teklifi değildir.</small><button className="button button--ink button--wide" onClick={addToCartWithQualityCheck}>Sepete ekle</button>{cartAdded && <div className="quality-note" role="status" aria-live="polite"><Info /> Tasarımın sepete eklendi. <a href="/sepet">Sepete git</a></div>}<button className="button button--ghost button--wide" onClick={() => setShowSummary(true)}>Sipariş özetini aç</button><button className="button button--ghost button--wide" onClick={() => setStep('design')}>Tasarıma dön</button></aside>
       </section>}
 
       {showSummary && !showEmail && <SummaryModal options={options} price={price} previews={previews} measurements={allMeasurements} orderId={orderId} templateMetadata={templateMetadata} onClose={() => setShowSummary(false)} onEmail={() => setShowEmail(true)} />}

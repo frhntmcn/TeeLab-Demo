@@ -2,6 +2,7 @@ import { ArrowLeft, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import { colorHex, colorNames } from '../data/products';
 import { formatTRY } from '../lib/pricing';
+import { AVAILABLE_SHIRT_SIZES, clampOrderQuantity, MAX_ORDER_QUANTITY } from '../lib/orderOptions';
 import type { CartItem, Product, ShirtColor, ShirtSize, Side } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -34,8 +35,8 @@ export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product
           <span className="eyebrow">TEELAB / KOLEKSİYON</span><h1>{product.name}</h1><p className="detail-lead">{product.description} 220 gr premium penye kumaş ve kalıcı DTG baskı.</p>
           <strong className="detail-price" aria-live="polite">{formatTRY(product.price * quantity)} <small>{quantity > 1 ? `${quantity} adet` : '1 adet'}</small></strong>
           <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button type="button" key={item} className={`color-option ${color === item ? 'is-active' : ''}`} onClick={() => setColor(item)} aria-label={`${colorNames[item]}${color === item ? ', seçili' : ''}`} aria-pressed={color === item} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
-          <fieldset><legend>Beden — <b>{size}</b></legend><div className="option-row">{(['S','M','L','XL'] as ShirtSize[]).map((item) => <button type="button" key={item} className={`size-option ${size === item ? 'is-active' : ''}`} onClick={() => setSize(item)} aria-pressed={size === item}>{item}</button>)}</div></fieldset>
-          <label className="quantity-field">Adet <span><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Adedi azalt">−</button><b>{quantity}</b><button onClick={() => setQuantity(Math.min(25, quantity + 1))} aria-label="Adedi artır">+</button></span></label>
+          <fieldset><legend>Beden — <b>{size}</b></legend><div className="option-row">{AVAILABLE_SHIRT_SIZES.map((item) => <button type="button" key={item} className={`size-option ${size === item ? 'is-active' : ''}`} onClick={() => setSize(item)} aria-pressed={size === item}>{item}</button>)}</div></fieldset>
+          <label className="quantity-field">Adet <span><button onClick={() => setQuantity(clampOrderQuantity(quantity - 1))} aria-label="Adedi azalt">−</button><b>{quantity}</b><button onClick={() => setQuantity(Math.min(MAX_ORDER_QUANTITY, quantity + 1))} aria-label="Adedi artır">+</button></span></label>
           <button className="button button--primary button--wide" onClick={add}><ShoppingBag size={18} /> Sepete Ekle</button>
           {added && <div className="toast" role="status"><CheckCircle2 size={18} /> Demo sepetine eklendi. Sepetteki ürünlerini kontrol edebilirsin.</div>}
           <button className="customize-link" onClick={onCustomize}>Bu tasarımı kendine göre özelleştir <span>Studio’da ön ve arka yüzü düzenle →</span></button>

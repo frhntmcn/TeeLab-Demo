@@ -1,12 +1,13 @@
 import type { PriceBreakdown } from '../types';
 import { pricingConfig, type PricingConfig } from '../config/pricing';
+import { clampOrderQuantity } from './orderOptions';
 
 export const formatTRY = (value: number) => new Intl.NumberFormat('tr-TR', {
   style: 'currency', currency: 'TRY', maximumFractionDigits: 0,
 }).format(value);
 
 export function calculatePrice(quantity: number, hasFront: boolean, hasBack: boolean, config: PricingConfig = pricingConfig): PriceBreakdown {
-  const safeQuantity = Math.max(1, Math.floor(quantity));
+  const safeQuantity = clampOrderQuantity(quantity);
   const baseUnit = config.baseUnit;
   const frontUnit = hasFront ? config.frontPrintUnit : 0;
   const backUnit = hasBack ? config.backPrintUnit : 0;

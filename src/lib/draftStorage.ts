@@ -1,5 +1,6 @@
 import { emptyDesign } from '../data/products';
 import type { SavedDraft } from '../types';
+import { normalizeOrderOptions } from './orderOptions';
 
 const STORAGE_KEY = 'teelab.demo.draft.v1';
 
@@ -18,7 +19,7 @@ export function loadDraft(): SavedDraft {
     if (!raw) return createEmptyDraft();
     const value = JSON.parse(raw) as Partial<SavedDraft>;
     if (![1, 2].includes(value.schemaVersion ?? 0) || !value.documents?.front || !value.documents?.back || !value.options) return createEmptyDraft();
-    return { ...createEmptyDraft(), ...value, options: { ...createEmptyDraft().options, ...value.options }, schemaVersion: 2 } as SavedDraft;
+    return { ...createEmptyDraft(), ...value, options: normalizeOrderOptions({ ...createEmptyDraft().options, ...value.options }), schemaVersion: 2 } as SavedDraft;
   } catch {
     return createEmptyDraft();
   }

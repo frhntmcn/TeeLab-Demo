@@ -1,8 +1,9 @@
 import { cartMergeKey } from './designIdentity';
+import { clampOrderQuantity, MAX_ORDER_QUANTITY } from './orderOptions';
 import type { CartItem } from '../types';
 
 export const CART_STORAGE_KEY = 'teelab-demo-cart-v1';
-export const MAX_CART_QUANTITY = 25;
+export const MAX_CART_QUANTITY = MAX_ORDER_QUANTITY;
 
 function isCartItem(value: unknown): value is CartItem {
   if (!value || typeof value !== 'object') return false;
@@ -18,7 +19,7 @@ export function deserializeCart(raw: string | null): CartItem[] {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isCartItem).filter((item) => Math.floor(item.quantity) >= 1).map((item) => ({ ...item, quantity: Math.min(MAX_CART_QUANTITY, Math.floor(item.quantity)) }));
+    return parsed.filter(isCartItem).filter((item) => Math.floor(item.quantity) >= 1).map((item) => ({ ...item, quantity: clampOrderQuantity(item.quantity) }));
   } catch {
     return [];
   }
@@ -34,12 +35,12 @@ export function cartSubtotal(items: CartItem[]): number {
 
 export function mergeCartItem(current: CartItem[], next: CartItem): CartItem[] {
   const match = current.find((item) => cartMergeKey(item) === cartMergeKey(next));
-  if (!match) return [...current, { ...next, quantity: Math.min(MAX_CART_QUANTITY, Math.max(1, Math.floor(next.quantity))) }];
-  return current.map((item) => item.id === match.id ? { ...item, quantity: Math.min(MAX_CART_QUANTITY, item.quantity + next.quantity) } : item);
+  if (!match) return [...current, { ...next, quantity: clampOrderQuantity(next.quantity) }];
+  return current.map((item) => item.id === match.id ? { ...item, quantity: clampOrderQuantity(item.quantity + next.quantity) } : item);
 }
 
 export function updateCartQuantity(items: CartItem[], id: string, quantity: number): CartItem[] {
   const safeQuantity = Math.floor(quantity);
   if (safeQuantity <= 0) return items.filter((item) => item.id !== id);
-  return items.map((item) => item.id === id ? { ...item, quantity: Math.min(MAX_CART_QUANTITY, safeQuantity) } : item);
+  return items.map((item) => item.id === id ? { ...item, quantity: clampOrderQuantity(safeQuantity) } : item);
 }
