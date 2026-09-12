@@ -1,8 +1,8 @@
 # TeeLab Release Candidate Final Audit
 
-## 1. Karar: BLOCKED
+## 1. Karar: RELEASE READY
 
-Uygulama kodu değiştirilmedi. Teknik ve browser smoke kanıtları temizdir; ancak geçerli demo checkout submit’i mevcut browser-local sepetini temizleyeceği için fresh/test sepeti olmadan çalıştırılmadı. Release talimatı bu durumda BLOCKED raporlanmasını gerektirir.
+Uygulama kodu değiştirilmedi. Teknik, browser smoke ve izole checkout kanıtları release kabulü için yeterlidir.
 
 ## 2. İncelenen master SHA
 
@@ -42,7 +42,7 @@ Mobil menü `aria-expanded` ile durum bildiriyor ve Escape ile kapanıyor. Hero 
 
 ## 10. Functional/regression sonucu
 
-Tüm hedef route’lar açıldı. Faz 3–6 regresyon paketi testlerde geçiyor. Geçerli checkout completion browser kanıtı alınmadı.
+Tüm hedef route’lar açıldı. Faz 3–6 regresyon paketi testlerde geçiyor. İzole fresh browser context’te geçerli checkout completion başarılı oldu; submit sonrası sepet temizlendi.
 
 ## 11. npm test gerçek sayıları
 
@@ -66,21 +66,12 @@ Audit raporu eklenmeden önce master çalışma ağacı temizdi. Audit branch: `
 
 ## 16. Bulgular P0–P3
 
-### RCA-001
-
-- Kategori: Functional
-- Öncelik: P1
-- Route: `/sepet`
-- Viewport: all
-- Bulgu: Geçerli demo checkout completion browser’da çalıştırılmadı.
-- Kanıt: Submit, mevcut browser-local sepeti temizlediği için çalıştırılmadı; sadece geçersiz validation ve form görünümü kanıtlandı.
-- Kullanıcı etkisi: Release acceptance için tamamlanmış checkout browser kanıtı eksik.
-- Önerilen düzeltme: Onaylı, fresh/test sepeti üzerinde geçerli demo checkout submit’ini çalıştır ve success/clear-state kanıtını kaydet.
+P0, P1, P2 veya P3 açık bulgu yok.
 
 ## 17. Release sonrası backlog
 
-Yok; önce RCA-001 kanıtı tamamlanmalı.
+Yok.
 
 ## 18. Açık/BLOCKED maddeler
 
-RCA-001 nedeniyle karar BLOCKED. Fresh browser context denemesinde yeni in-app browser sekmesi mevcut localStorage sepetini paylaştı ve `36 ürün` gösterdi; bu nedenle fresh/incognito kanıtı üretmedi. Mevcut kullanıcı sepeti silinmedi. Uygulama kodu değiştirilmedi.
+RCA-001 izole fresh browser context’te tamamlandı. Fresh localStorage başlangıçta `[]` idi; hazır ürün sepete eklendi. `Ada Test` / `0532 123 45 67` / `ada.test@example.com` / `Kadıköy, İstanbul` test verileriyle geçerli form submit edildi. “Demo talebin hazır.” başarı ekranı göründü; ödeme alınmadığı ve gerçek sipariş gönderilmediği mesajı doğrulandı. “Koleksiyona dön” sonrasında `/sepet` yeniden açıldığında empty-cart ekranı göründü ve localStorage cart değeri tekrar `[]` oldu. Mevcut kullanıcı sepetine dokunulmadı. Uygulama kodu değiştirilmedi.
