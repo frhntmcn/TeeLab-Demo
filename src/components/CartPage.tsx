@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { colorNames } from '../data/products';
 import { cartSubtotal, MAX_CART_QUANTITY } from '../lib/cart';
 import { type CheckoutFormValues, validateCheckout } from '../lib/checkout';
-import { formatTRY } from '../lib/pricing';
+import { cartLineTotal, formatTRY } from '../lib/pricing';
 import type { CartItem } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -33,7 +33,7 @@ export function CartPage({ items, onUpdate, onComplete, onContinue }: Props) {
     {!items.length ? <section className="empty-cart"><ShoppingBag /><h2>Sepetin henüz boş.</h2><p>Koleksiyondan bir tasarım seçebilir veya stüdyoda kendi fikrini oluşturabilirsin.</p><button className="button button--primary" onClick={onContinue}>Koleksiyonu keşfet</button></section> : <div className="cart-layout">
       <section className="cart-items" aria-label="Sepet ürünleri">{items.map((item) => <article className="cart-line" key={item.id}>
         <div className="cart-thumb">{item.designPreview ? <img src={item.designPreview} alt={`${item.name} tasarım önizlemesi`} /> : <ShirtVisual color={item.color} artwork={item.artwork} label={`${item.name} ön görünümü`} />}</div>
-        <div className="cart-line-copy"><span className="eyebrow">{item.isCustom ? 'TEELAB STÜDYO' : 'TEELAB KOLEKSİYON'}</span><h2>{item.name}</h2><p>{colorNames[item.color]} · {item.size} beden · {item.fit === 'oversize' ? 'Oversize' : 'Slim fit'} · {item.isCustom ? 'Özel tasarım' : 'Hazır tasarım'}</p><strong>{formatTRY(item.unitPrice)}</strong></div>
+        <div className="cart-line-copy"><span className="eyebrow">{item.isCustom ? 'TEELAB STÜDYO' : 'TEELAB KOLEKSİYON'}</span><h2>{item.name}</h2><p>{colorNames[item.color]} · {item.size} beden · {item.fit === 'oversize' ? 'Oversize' : 'Slim fit'} · {item.isCustom ? 'Özel tasarım' : 'Hazır tasarım'}</p><strong>{formatTRY(cartLineTotal(item))}</strong>{item.quantity > 1 && <small>{formatTRY(item.unitPrice)} / adet</small>}</div>
         <div className="cart-quantity" aria-label={`${item.name} adedi`}><button onClick={() => onUpdate(item.id, item.quantity - 1)} aria-label={`${item.name} adedini azalt`}><Minus /></button><b aria-live="polite">{item.quantity}</b><button onClick={() => onUpdate(item.id, item.quantity + 1)} disabled={item.quantity >= MAX_CART_QUANTITY} aria-label={`${item.name} adedini artır`}><Plus /></button></div>
         <button className="cart-remove" onClick={() => onUpdate(item.id, 0)} aria-label={`${item.name} ürününü sepetten kaldır`}><Trash2 /></button>
       </article>)}</section>

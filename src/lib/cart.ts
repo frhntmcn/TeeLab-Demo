@@ -1,6 +1,7 @@
 import { cartMergeKey } from './designIdentity';
 import { clampOrderQuantity, MAX_ORDER_QUANTITY } from './orderOptions';
 import type { CartItem } from '../types';
+import { cartLineTotal } from './pricing';
 
 export const CART_STORAGE_KEY = 'teelab-demo-cart-v1';
 export const MAX_CART_QUANTITY = MAX_ORDER_QUANTITY;
@@ -14,12 +15,20 @@ function isCartItem(value: unknown): value is CartItem {
     && typeof item.quantity === 'number' && Number.isFinite(item.quantity) && item.quantity > 0;
 }
 
+function normalizePrintSides(item: CartItem): CartItem {
+  const printSides = item.printSides;
+  if (printSides === undefined || (typeof printSides?.front === 'boolean' && typeof printSides?.back === 'boolean')) return item;
+  const withoutPrintSides = { ...item };
+  delete withoutPrintSides.printSides;
+  return withoutPrintSides;
+}
+
 export function deserializeCart(raw: string | null): CartItem[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isCartItem).filter((item) => Math.floor(item.quantity) >= 1).map((item) => ({ ...item, quantity: clampOrderQuantity(item.quantity) }));
+    return parsed.filter(isCartItem).filter((item) => Math.floor(item.quantity) >= 1).map((item) => ({ ...normalizePrintSides(item), quantity: clampOrderQuantity(item.quantity) }));
   } catch {
     return [];
   }
@@ -30,7 +39,7 @@ export function serializeCart(items: CartItem[]): string {
 }
 
 export function cartSubtotal(items: CartItem[]): number {
-  return items.reduce((total, item) => total + item.unitPrice * item.quantity, 0);
+  return items.reduce((total, item) => total + cartLineTotal(item), 0);
 }
 
 export function mergeCartItem(current: CartItem[], next: CartItem): CartItem[] {
