@@ -13,6 +13,7 @@ import { sideHasDesignContent } from '../lib/templateApplication';
 import { uploadIssueMessage, validateUploadFile } from '../lib/imageValidation';
 import { canContinue, hasOverflow } from '../lib/qualityGate';
 import { AVAILABLE_SHIRT_SIZES, clampOrderQuantity, MAX_ORDER_QUANTITY } from '../lib/orderOptions';
+import { measureDocument } from '../lib/measureDocument';
 import type { CartItem, DesignDocument, DesignTemplate, ObjectMeasurement, OrderOptions, PreviewImages, ShirtColor, ShirtFit, Side, TemplateMetadata } from '../types';
 import { FabricEditor, type EditorHandle, type SelectionInfo } from './FabricEditor';
 import { Mockup } from './Mockup';
@@ -32,6 +33,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [side, setSide] = useState<Side>(initialDraft.current.activeSide);
   const [documents, setDocuments] = useState<Record<Side, DesignDocument>>(initialDraft.current.documents);
   const [measurements, setMeasurements] = useState<Record<Side, ObjectMeasurement[]>>({ front: [], back: [] });
+  const [measurementsReady, setMeasurementsReady] = useState(false);
   const [previews, setPreviews] = useState<PreviewImages>(initialDraft.current.previews ?? { front: '', back: '' });
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [options, setOptions] = useState<OrderOptions>(initialDraft.current.options);
@@ -39,6 +41,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const [cartAdded, setCartAdded] = useState(false);
   const [saveStatus, setSaveStatus] = useState('Taslak tarayıcıda saklanır');
   const [draftRevision, setDraftRevision] = useState(0);
+  const documentsRef = useRef(documents);
   const [showSummary, setShowSummary] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -65,7 +68,8 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
         size: options.size,
         fit: options.fit,
         quantity: options.quantity,
-        unitPrice: Math.round(price.total / options.quantity),
+        unitPrice: price.baseUnit + price.frontUnit + price.backUnit,
+        printSides: { front: measurements.front.length > 0, back: measurements.back.length > 0 },
         artwork: 'typography',
         designPreview: previews.front || previews.back || undefined,
         isCustom: true,
@@ -73,6 +77,25 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
       setCartAdded(true);
     } catch { setCartAdded(false); setNotice('Tasarım sepete eklenemedi. Tekrar dene.'); }
   };
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const snapshot = documentsRef.current;
+    setMeasurementsReady(false);
+    void Promise.all([measureDocument(snapshot.front, 'front'), measureDocument(snapshot.back, 'back')]).then(([front, back]) => {
+      if (cancelled) return;
+      setMeasurements((current) => ({
+        front: documentsRef.current.front === snapshot.front ? front : current.front,
+        back: documentsRef.current.back === snapshot.back ? back : current.back,
+      }));
+      setMeasurementsReady(true);
+    });
+    return () => { cancelled = true; };
+  }, [draftRevision]);
 
   useEffect(() => {
     if (skipNextSave.current) { skipNextSave.current = false; return; }
@@ -106,7 +129,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
   const resetDraft = () => {
     if (!window.confirm('Bu tarayıcıdaki ön ve arka yüz taslağını kalıcı olarak temizlemek istiyor musun?')) return;
     skipNextSave.current = true; clearDraft(); const empty = createEmptyDraft();
-    setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setPreviews({ front: '', back: '' });
+    setDocuments({ front: emptyDesign(), back: emptyDesign() }); setMeasurements({ front: [], back: [] }); setMeasurementsReady(false); setPreviews({ front: '', back: '' });
     setOptions(empty.options); setSide('front'); setSelection(null); setNotice('Yerel demo taslağı temizlendi.'); setSaveStatus('Taslak temizlendi'); setDraftRevision((value) => value + 1);
     setTemplateMetadata({ front: undefined, back: undefined }); setHistoryState({ canUndo: false, canRedo: false });
   };
@@ -122,6 +145,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     void applyTemplate(template);
   };
   const continueToPreview = () => {
+    if (!measurementsReady) return setNotice('Ölçümler hazırlanıyor…');
     if (!canContinueDesign) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Önizlemeye geçmeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
     setStep('preview');
   };
@@ -130,6 +154,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     setStep(next);
   };
   const addToCartWithQualityCheck = () => {
+    if (!measurementsReady) return setNotice('Ölçümler hazırlanıyor…');
     if (!canContinueDesign) return setNotice(hasOverflowDesign ? 'Tasarım baskı alanının dışına taşıyor. Devam etmek için nesneyi alanın içine al.' : 'Tasarımda 200 PPI altında bir görsel var. Sepete eklemeden önce görseli küçült veya daha yüksek çözünürlüklü dosya yükle.');
     addCustomDesignToCart();
   };

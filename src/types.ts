@@ -23,6 +23,7 @@ export interface CartItem {
   fit?: ShirtFit;
   quantity: number;
   unitPrice: number;
+  printSides?: { front: boolean; back: boolean };
   artwork: Product['artwork'];
   designPreview?: string;
   isCustom?: boolean;

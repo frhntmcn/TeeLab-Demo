@@ -30,9 +30,25 @@ describe('mergeCartItem', () => {
     expect(deserializeCart(JSON.stringify([{ ...item('d-fractional'), quantity: 0.5 }]))).toEqual([]);
     expect(deserializeCart(JSON.stringify([{ ...item('d-zero'), quantity: 0 }, { ...item('d-nan'), quantity: null }]))).toEqual([]);
     expect(deserializeCart(JSON.stringify([{ ...item('d-large'), quantity: 99 }]))[0].quantity).toBe(25);
+    expect(deserializeCart(JSON.stringify([{ ...item('d-print'), printSides: { front: 'yes', back: false } }]))[0].printSides).toBeUndefined();
+    expect(deserializeCart(JSON.stringify([{ ...item('d-null-print'), printSides: null }]))[0].printSides).toBeUndefined();
   });
 
   it('recalculates the subtotal from each cart update', () => {
     expect(cartSubtotal([item('d-one', 2), { ...item('d-two', 3), unitPrice: 200 }])).toBe(1600);
+  });
+
+  it('recalculates merged custom designs using their current quantity discount', () => {
+    const custom = { ...item('d-merge', 4), unitPrice: 590, printSides: { front: true, back: true } };
+    const merged = mergeCartItem([custom], { ...custom, id: 'd-merge-next', quantity: 1 });
+    expect(merged).toHaveLength(1);
+    expect(cartSubtotal(merged)).toBe(2743);
+  });
+
+  it('keeps custom designs with distinct hashes or fits as separate discounted lines', () => {
+    const first = { ...item('d-one', 5), unitPrice: 465, fit: 'slim' as const, printSides: { front: true, back: false } };
+    const second = { ...first, id: 'd-two', designHash: 'd-two', fit: 'oversize' as const };
+    expect(mergeCartItem([first], second)).toHaveLength(2);
+    expect(cartSubtotal([first, second])).toBe(4324);
   });
 });

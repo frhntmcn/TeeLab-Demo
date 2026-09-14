@@ -1,3 +1,4 @@
 import { expect, it } from 'vitest'; import { canContinue, hasOverflow } from './qualityGate';
 const item = { id:'a', side:'front' as const, kind:'image' as const, label:'x', xCm:15,yCm:20,widthCm:10,heightCm:10,angle:0,detail:'x',vector:false,quality:'suitable' as const };
 it('blocks synthetic overflow and raster risk while allowing valid and vector items', () => { expect(hasOverflow([{...item,xCm:1}])).toBe(true); expect(canContinue([{...item,xCm:1}])).toBe(false); expect(canContinue([{...item,quality:'risk'}])).toBe(false); expect(canContinue([{...item,vector:true,quality:'risk'}])).toBe(true); expect(canContinue([item])).toBe(true); });
+it('blocks a passive rear measurement in the shared quality gate', () => { expect(canContinue([item, { ...item, id: 'rear-overflow', side: 'back', xCm: 1 }])).toBe(false); });
