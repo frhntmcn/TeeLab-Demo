@@ -2,8 +2,9 @@ import { cartMergeKey } from './designIdentity';
 import { clampOrderQuantity, MAX_ORDER_QUANTITY } from './orderOptions';
 import type { CartItem } from '../types';
 import { cartLineTotal } from './pricing';
+import { brand } from '../config/brand';
 
-export const CART_STORAGE_KEY = 'teelab-demo-cart-v1';
+export const CART_STORAGE_KEY = `${brand.storageNamespace}-demo-cart-v1`;
 export const MAX_CART_QUANTITY = MAX_ORDER_QUANTITY;
 
 function isCartItem(value: unknown): value is CartItem {

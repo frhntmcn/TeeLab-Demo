@@ -1,6 +1,10 @@
-# TeeLab Demo
+# Maymoon Demo
 
-Türkiye odaklı dijital baskı markası için hazırlanmış, local çalışan React tabanlı tişört e-ticaret ve tasarım stüdyosu demosu.
+Maymoon için hazırlanmış, yerelde çalışan React tabanlı tişört e-ticaret ve tasarım stüdyosu demosu.
+
+## Marka yapılandırması
+
+Marka adı, alan adı, iletişim adresi ve sosyal kullanıcı adı [src/config/brand.ts](src/config/brand.ts) dosyasında tutulur. İlk kurumsal iletişim adresi `info@maymoon.com.tr`, alan adı `maymoon.com.tr` ve planlanan sosyal kullanıcı adı `@maymoontr` olarak tanımlıdır. DNS veya gerçek e-posta gönderimi bu demo kapsamında kurulmaz.
 
 ## Çalıştırma
 
@@ -56,7 +60,7 @@ Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tan�
 
 ### Mockup varlıkları ve kullanım notu
 
-`src/assets/mockups/` altındaki sekiz WebP varlığı (beyaz, siyah, bej ve mor; ön ve arka), OpenAI ImageGen ile yalnızca bu TeeLab demosu için özgün olarak üretildi. Harici hotlink, üçüncü taraf marka, logo veya telifli tasarım kullanılmadı. Kullanım, kullanıcı ile OpenAI arasındaki geçerli hizmet koşullarına tabidir.
+`src/assets/mockups/` altındaki sekiz WebP varlığı (beyaz, siyah, bej ve mor; ön ve arka), OpenAI ImageGen ile yalnızca bu Maymoon demosu için özgün olarak üretildi. Harici hotlink, üçüncü taraf marka, logo veya telifli tasarım kullanılmadı. Kullanım, kullanıcı ile OpenAI arasındaki geçerli hizmet koşullarına tabidir.
 
 `src/assets/artworks/` altındaki Gece Yörüngesi, Anadolu Form, Mor Sinyal ve İyi Fikir WebP baskı artwork'leri de OpenAI ImageGen ile bu demo için özgün olarak üretildi. Bunlar gerçek üretim/prepress dosyası değil, marka ve mockup sunumu için optimize edilmiş demo görselleridir.
 
@@ -73,7 +77,7 @@ Her yüz için mockup üzerindeki sunum dikdörtgeni ayrı konfigürasyonda tan�
 
 ## Taslak kaydı
 
-Ön/arka Fabric dokümanları, ürün rengi, beden, adet, aktif yüz ve mockup önizlemeleri tarayıcının `localStorage` alanında saklanır. Sayfa yenilendiğinde taslak geri yüklenir. Depolama kullanılamazsa uygulama çalışmaya devam eder. “Taslağı temizle” yalnızca bu tarayıcıdaki TeeLab demo taslağını siler.
+Ön/arka Fabric dokümanları, ürün rengi, beden, adet, aktif yüz ve mockup önizlemeleri tarayıcının `localStorage` alanında saklanır. Sayfa yenilendiğinde taslak geri yüklenir. Depolama kullanılamazsa uygulama çalışmaya devam eder. “Taslağı temizle” yalnızca bu tarayıcıdaki Maymoon demo taslağını siler.
 
 Taslak kayıtları şema sürümü 2 ile saklanır; v1 kayıtları yükleme sırasında v2 yapısına taşınır. Sepet satırları `productId + renk + beden + designHash` anahtarıyla birleştirilir; farklı özel tasarımlar ayrı satırda kalır. `npm test` sepet kimliği, fiyatlandırma ve tasarım hash davranışlarını doğrular.
 

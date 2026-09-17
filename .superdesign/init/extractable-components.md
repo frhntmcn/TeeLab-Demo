@@ -3,14 +3,14 @@
 ## Header
 - Source: `src/components/Header.tsx`
 - Category: layout
-- Description: Sticky TeeLab wordmark, navigation and cart indicator.
+- Description: Sticky Maymoon wordmark, navigation and cart indicator.
 - Extractable props: `cartCount`, `activeItem`.
 - Hardcoded: logo, menu labels, ShoppingBag icon, routes.
 
 ## Logo
 - Source: `src/components/Logo.tsx`
 - Category: basic
-- Description: TL badge and TeeLab wordmark.
+- Description: MM badge and Maymoon wordmark.
 - Extractable props: `inverse`.
 - Hardcoded: letter mark and wordmark.
 

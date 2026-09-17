@@ -1,18 +1,31 @@
 import { ArrowLeft, ArrowRight, Check, Pause, Play, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { brand } from '../config/brand';
 import { colorHex, colorNames, products } from '../data/products';
 import { formatTRY } from '../lib/pricing';
+import { getVisibleStorefrontProducts, STOREFRONT_MANAGEMENT_EVENT } from '../lib/storefrontManagement';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
 export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; onProduct: (product: Product) => void }) {
   const banners = [
-    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', color: 'black' as const, artwork: 'orbit' as const, name: 'Gece Yörüngesi', meta: 'Ön ve arka yüzüyle tasarlanmış TeeLab koleksiyon görünümü.', label: 'Siyah tişört üzerinde Gece Yörüngesi tasarımı.' },
-    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', color: 'beige' as const, artwork: 'anatolia' as const, name: 'Anadolu Form', meta: 'TeeLab koleksiyonundaki ön ve arka baskı görünümü.', label: 'Bej tişört üzerinde Anadolu Form tasarımı.' },
-    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, name: 'İyi Fikir', meta: 'TeeLab Stüdyo için üretim öncesi baskı yerleşimi örneği.', label: 'Beyaz tişört üzerinde İyi Fikir tasarımı.' },
+    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', color: 'black' as const, artwork: 'orbit' as const, name: 'Gece Yörüngesi', meta: `Ön ve arka yüzüyle tasarlanmış ${brand.name} koleksiyon görünümü.`, label: 'Siyah tişört üzerinde Gece Yörüngesi tasarımı.' },
+    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', color: 'beige' as const, artwork: 'anatolia' as const, name: 'Anadolu Form', meta: `${brand.name} koleksiyonundaki ön ve arka baskı görünümü.`, label: 'Bej tişört üzerinde Anadolu Form tasarımı.' },
+    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, name: 'İyi Fikir', meta: `${brand.name} Stüdyo için üretim öncesi baskı yerleşimi örneği.`, label: 'Beyaz tişört üzerinde İyi Fikir tasarımı.' },
   ];
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [visibleProducts, setVisibleProducts] = useState(() => getVisibleStorefrontProducts(products));
+
+  useEffect(() => {
+    const refreshProducts = () => setVisibleProducts(getVisibleStorefrontProducts(products));
+    window.addEventListener('storage', refreshProducts);
+    window.addEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProducts);
+    return () => {
+      window.removeEventListener('storage', refreshProducts);
+      window.removeEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProducts);
+    };
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -32,9 +45,9 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
 
   return (
     <main className="catalog-page">
-      <section className="home-hero" aria-roledescription="carousel" aria-label="TeeLab tanıtımı">
+      <section className="home-hero" aria-roledescription="carousel" aria-label={`${brand.name} tanıtımı`}>
         <div className="home-hero__copy">
-          <span className="editorial-index">TEELAB / 2026 — İSTANBUL</span>
+          <span className="editorial-index">{brand.name.toUpperCase()} / 2026 — {brand.city.toUpperCase()}</span>
           <p className="hero-slide-status" aria-live="polite">{activeBanner + 1} / {banners.length} · {banner.name}</p>
           <h1>{banner.title}</h1>
           <p>{banner.copy}</p>
@@ -51,7 +64,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
         </div>
         <div className="home-hero__visual" key={activeBanner}>
           <ShirtVisual color={banner.color} artwork={banner.artwork} label={banner.label} />
-          <div className="home-hero__meta"><span>TEELAB KOLEKSİYON</span><b>{banner.name}</b><small>{banner.meta}</small></div>
+          <div className="home-hero__meta"><span>{brand.name.toUpperCase()} KOLEKSİYON</span><b>{banner.name}</b><small>{banner.meta}</small></div>
         </div>
       </section>
 
@@ -65,7 +78,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
         ].map(([number, title, copy]) => <li key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></li>)}</ol>
       </section>
 
-      <section className="trust-strip" aria-label="TeeLab özellikleri">
+      <section className="trust-strip" aria-label={`${brand.name} özellikleri`}>
         <span><Check /> Ön / arka baskı</span><span><Check /> 30 × 40 cm baskı alanı</span><span><Check /> 300 PPI kalite kontrolü</span><span><Check /> Taslağını kaydet</span>
       </section>
 
@@ -75,7 +88,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           <p>Her parça ön ve arka yüzüyle birlikte düşünülür. Baskı dokusu, kumaş ve renk tek bir kompozisyonda buluşur.</p>
         </header>
         <div className="editorial-product-grid">
-          {products.map((product, index) => (
+          {visibleProducts.map((product, index) => (
             <article className="editorial-product" key={product.id}>
               <button className="editorial-product__visual" onClick={() => onProduct(product)} aria-label={`${product.name} ürününü incele`}>
                 <span className="editorial-product__number">0{index + 1}</span>
@@ -96,7 +109,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
       </section>
 
       <section className="editorial-studio-cta">
-        <span className="editorial-index"><Sparkles size={13} /> TEELAB STÜDYO</span>
+        <span className="editorial-index"><Sparkles size={13} /> {brand.name.toUpperCase()} STÜDYO</span>
         <h2>Hazır olanı değil,<br />aklındakini giy.</h2>
         <p>Ürününü seç. Ön ve arka yüzü tasarla. Gerçek baskı ölçüleriyle önizle.</p>
         <button className="button button--paper" onClick={onCustomize}>Stüdyoyu aç <ArrowRight size={17} /></button>

@@ -3,6 +3,7 @@ import {
   Eye, ImagePlus, Info, Minus, Palette, Plus, Redo2, RotateCcw, Save, Shirt, Trash2, Type, Undo2, Upload, WandSparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { brand } from '../config/brand';
 import { colorHex, colorNames, emptyDesign } from '../data/products';
 import { cloneTemplateDocument, designTemplates } from '../data/designTemplates';
 import { symbols } from '../data/symbols';
@@ -163,7 +164,7 @@ export function Studio({ onBack, onAdd }: { onBack: () => void; onAdd: (item: Ca
     <main className="studio-page studio-page--steps">
       <header className="studio-topbar studio-topbar--quiet">
         <button className="back-link" onClick={onBack}><ArrowLeft size={17} /> Mağazaya dön</button>
-        <div><b>TeeLab Stüdyo</b><span><Save size={11} /> {saveStatus}</span></div>
+        <div><b>{brand.name} Stüdyo</b><span><Save size={11} /> {saveStatus}</span></div>
         <button className="clear-draft-button" onClick={resetDraft}>Taslağı temizle</button>
       </header>
       <nav className="studio-progress" aria-label="Tasarım adımları">

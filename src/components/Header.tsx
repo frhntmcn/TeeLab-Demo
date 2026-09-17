@@ -1,6 +1,7 @@
 import { Menu, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { brand } from '../config/brand';
 import { Logo } from './Logo';
 
 export function Header({ cartCount }: { cartCount: number }) {
@@ -29,7 +30,7 @@ export function Header({ cartCount }: { cartCount: number }) {
 
   return (
     <header className="site-header">
-      <Link className="logo-button" to="/" aria-label="TeeLab ana sayfa"><Logo /></Link>
+      <Link className="logo-button" to="/" aria-label={`${brand.name} ana sayfa`}><Logo /></Link>
       <nav className="desktop-nav" aria-label="Ana menü">
         <NavLink to="/" end>Ana Sayfa</NavLink>
         <Link className={collectionActive ? 'active' : undefined} to="/#koleksiyon">Koleksiyon</Link>

@@ -1,8 +1,9 @@
 import { emptyDesign } from '../data/products';
 import type { SavedDraft } from '../types';
 import { normalizeOrderOptions } from './orderOptions';
+import { brand } from '../config/brand';
 
-const STORAGE_KEY = 'teelab.demo.draft.v1';
+const STORAGE_KEY = `${brand.storageNamespace}.demo.draft.v1`;
 
 export const createEmptyDraft = (): SavedDraft => ({
   schemaVersion: 2,

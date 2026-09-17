@@ -1,4 +1,5 @@
 import { Check, Download, FileArchive, Mail, X } from 'lucide-react';
+import { brand } from '../config/brand';
 import { colorNames } from '../data/products';
 import { formatTRY } from '../lib/pricing';
 import type { ObjectMeasurement, OrderOptions, PreviewImages, PriceBreakdown, Side, TemplateMetadata } from '../types';
@@ -47,7 +48,7 @@ export function SummaryModal(props: SharedProps & { onClose: () => void; onEmail
 export function EmailModal(props: SharedProps & { onClose: () => void }) {
   const now = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'long', timeStyle: 'short' }).format(new Date());
   const productionPackage = {
-    schema: 'teelab.production.v2',
+    schema: 'maymoon.production.v2',
     orderId: props.orderId,
     createdAt: new Date().toISOString(),
     demoOnly: true,
@@ -74,7 +75,7 @@ export function EmailModal(props: SharedProps & { onClose: () => void }) {
   };
 
   const simulateDownload = (name: string) => {
-    const content = name.endsWith('.json') ? JSON.stringify(productionPackage, null, 2) : 'TeeLab demo baskı dosyası — gerçek üretim çıktısı değildir.';
+    const content = name.endsWith('.json') ? JSON.stringify(productionPackage, null, 2) : `${brand.name} demo baskı dosyası — gerçek üretim çıktısı değildir.`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -89,7 +90,7 @@ export function EmailModal(props: SharedProps & { onClose: () => void }) {
       <section className="modal email-modal" role="dialog" aria-modal="true" aria-labelledby="email-title">
         <button className="modal-close" onClick={props.onClose} aria-label="E-posta önizlemesini kapat"><X /></button>
         <div className="demo-banner">DEMO ÖNİZLEME · Bu e-posta gönderilmedi, üretim kaydı oluşturulmadı.</div>
-        <div className="email-header"><div className="email-icon"><Mail /></div><div><span>İmalathane e-postası</span><h2 id="email-title">[TeeLab] Yeni Baskı Siparişi — {props.orderId}</h2><p><b>Kime:</b> uretim@teelab.demo &nbsp; · &nbsp; <b>Kimden:</b> siparis@teelab.demo</p></div></div>
+        <div className="email-header"><div className="email-icon"><Mail /></div><div><span>İmalathane e-postası</span><h2 id="email-title">[{brand.name}] Yeni Baskı Siparişi — {props.orderId}</h2><p><b>İletişim:</b> {brand.contactEmail}</p></div></div>
         <div className="email-body">
           <p>Merhaba Üretim Ekibi,</p><p><b>{props.orderId}</b> numaralı siparişin demo baskı paketi aşağıdadır. Lütfen yerleşim ve kaynak türlerini üretim öncesinde kontrol edin.</p>
           <div className="email-order-grid"><span><small>SİPARİŞ NO</small><b>{props.orderId}</b></span><span><small>TARİH</small><b>{now}</b></span><span><small>ÜRÜN</small><b>Premium Unisex / {colorNames[props.options.color]} / {props.options.fit === 'slim' ? 'Slim fit' : 'Oversize'}</b></span><span><small>BEDEN / ADET</small><b>{props.options.size} / {props.options.quantity}</b></span><span><small>ŞABLONLAR</small><b>Ön: {templateSummary(props.templateMetadata?.front)} · Arka: {templateSummary(props.templateMetadata?.back)}</b></span><span><small>TOPLAM</small><b>{formatTRY(props.price.total)}</b></span></div>

@@ -1,5 +1,6 @@
 import { ArrowLeft, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
+import { brand } from '../config/brand';
 import { colorHex, colorNames } from '../data/products';
 import { formatTRY } from '../lib/pricing';
 import { AVAILABLE_SHIRT_SIZES, clampOrderQuantity, MAX_ORDER_QUANTITY } from '../lib/orderOptions';
@@ -32,7 +33,7 @@ export function ProductDetail({ product, onBack, onCustomize, onAdd }: { product
           <span className="detail-side-caption">{viewSide === 'front' ? 'ÖN GÖRÜNÜM' : 'ARKA GÖRÜNÜM'}</span>
         </div>
         <section className="detail-panel">
-          <span className="eyebrow">TEELAB / KOLEKSİYON</span><h1>{product.name}</h1><p className="detail-lead">{product.description} 220 gr premium penye kumaş ve kalıcı DTG baskı.</p>
+          <span className="eyebrow">{brand.name.toUpperCase()} / KOLEKSİYON</span><h1>{product.name}</h1><p className="detail-lead">{product.description} 220 gr premium penye kumaş ve kalıcı DTG baskı.</p>
           <strong className="detail-price" aria-live="polite">{formatTRY(product.price * quantity)} <small>{quantity > 1 ? `${quantity} adet` : '1 adet'}</small></strong>
           <fieldset><legend>Renk — <b>{colorNames[color]}</b></legend><div className="option-row">{product.colors.map((item) => <button type="button" key={item} className={`color-option ${color === item ? 'is-active' : ''}`} onClick={() => setColor(item)} aria-label={`${colorNames[item]}${color === item ? ', seçili' : ''}`} aria-pressed={color === item} style={{ '--swatch': colorHex[item] } as React.CSSProperties} />)}</div></fieldset>
           <fieldset><legend>Beden — <b>{size}</b></legend><div className="option-row">{AVAILABLE_SHIRT_SIZES.map((item) => <button type="button" key={item} className={`size-option ${size === item ? 'is-active' : ''}`} onClick={() => setSize(item)} aria-pressed={size === item}>{item}</button>)}</div></fieldset>

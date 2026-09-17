@@ -1,7 +1,14 @@
-# TeeLab Editorial Commerce Design System
+# Maymoon Editorial Commerce Design System
 
 ## Product
-TeeLab is a Turkish digital-print T-shirt label. Catalog pages should feel like finished independent fashion retail; Studio should feel like a calm creative tool. Preserve the production model, mockup mapping, draft saving and order simulation.
+Maymoon is a Turkish digital-print T-shirt label. Catalog pages should feel like finished independent fashion retail; Studio should feel like a calm creative tool. Preserve the production model, mockup mapping, draft saving and order simulation.
+
+## Administration experience
+- The management panel is for people with little technical confidence. Prefer familiar Turkish words, short instructions and one obvious primary action per section.
+- Organize work around real tasks: review new orders, prepare production, update products and answer customers. Avoid developer vocabulary, dense analytics and unexplained icons.
+- Make status visible in plain language, pair colors with text, and explain destructive or irreversible actions before they happen.
+- The home screen answers three questions immediately: “Bugün ne oldu?”, “Benden ne bekleniyor?” and “Sırada ne var?”.
+- Use the same editorial restraint, navy, paper and purple accent as the storefront, but prioritize clarity over fashion-editorial composition inside operational screens.
 
 ## Visual direction
 - Editorial minimalism, art-school restraint, premium Turkish streetwear.

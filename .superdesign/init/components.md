@@ -2,14 +2,16 @@
 
 ## Logo — `src/components/Logo.tsx`
 
-Brand wordmark and coded TL mark. Props: `inverse?: boolean`.
+Maymoon wordmark and MM mark. Props: `inverse?: boolean`.
 
 ```tsx
+import { brand } from '../config/brand';
+
 export function Logo({ inverse = false }: { inverse?: boolean }) {
   return (
-    <span className={`brand ${inverse ? 'brand--inverse' : ''}`} aria-label="TeeLab ana sayfa">
-      <span className="brand-mark" aria-hidden="true"><i>T</i><i>L</i></span>
-      <span>Tee<span>Lab</span></span>
+    <span className={`brand ${inverse ? 'brand--inverse' : ''}`} aria-label={`${brand.name} ana sayfa`}>
+      <span className="brand-mark" aria-hidden="true"><i>M</i><i>M</i></span>
+      <span>{brand.name}</span>
     </span>
   );
 }

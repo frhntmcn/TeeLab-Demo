@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/yonetim": {
+      "targetKind": "new-ui",
+      "projectId": "088329fa-89df-409a-8409-4025dbb30653",
+      "activeDraftId": "370a219b-8d37-40f4-a132-68e6654f6989",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [
+        "public-favicon.svg"
+      ],
+      "brandAssets": {
+        "logo": {
+          "assetKey": "public-favicon.svg",
+          "url": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/brand-assets/public-favicon.svg/favicon.svg",
+          "sourcePath": "public/favicon.svg"
+        }
+      },
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "src/styles.css:1:60",
+        "src/styles.css:134:182",
+        "src/styles.css:203:240",
+        "src/styles.css:307:335",
+        "src/config/brand.ts",
+        "src/components/Logo.tsx",
+        "src/components/Header.tsx",
+        "src/components/Catalog.tsx"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "f8930c6a7dd21a47078816b7d662b1d05ed6022838a13ee1caf1446ae6c6daf0",
+        ".superdesign/init/theme.md": "e1f6ba3d6de3d6100754e14def87ac31140abef81f63d25561878914ab3ae104",
+        "src/styles.css": "243b790bf94a437b255778a3082a2002e376b12669ea507c79dd16f1e5a82c2d",
+        "src/config/brand.ts": "932c4269ea00c89bf8200fc2841484c18c16ce319b162ab5fa758716ecc1ab04",
+        "src/components/Logo.tsx": "792a47492d49795bc287c22fb39cf1cea713422bdfafaf4219d087687061e0bf",
+        "src/components/Header.tsx": "162a90f145ac2525e0845778866559039e4ff326c716b238b016444ca49b021b",
+        "src/components/Catalog.tsx": "632ba98cec7a89a4b22692757a409a8b5f3614f44476a8019cc43f6e078aa075"
+      },
+      "components": [],
+      "drafts": {
+        "370a219b-8d37-40f4-a132-68e6654f6989": {
+          "title": "Maymoon Ana Yönetim Paneli",
+          "visualDirection": "Sade, görev odaklı ve teknolojiye uzak kullanıcılar için erişilebilir Maymoon yönetim paneli",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-17T12:05:17.7353928Z"
+    }
+  }
+}

@@ -6,10 +6,13 @@ import { Header } from './components/Header';
 import { Logo } from './components/Logo';
 import { ProductDetail } from './components/ProductDetail';
 import { products } from './data/products';
+import { brand } from './config/brand';
 import type { CartItem } from './types';
 import { CART_STORAGE_KEY, deserializeCart, mergeCartItem, serializeCart, updateCartQuantity } from './lib/cart';
+import { getVisibleStorefrontProducts } from './lib/storefrontManagement';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const readCart = () => deserializeCart(window.localStorage.getItem(CART_STORAGE_KEY));
 
 function ScrollManager() {
@@ -27,10 +30,10 @@ function ScrollManager() {
 function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const product = products.find((item) => item.id === slug);
+  const product = getVisibleStorefrontProducts(products).find((item) => item.id === slug);
 
   useEffect(() => {
-    document.title = product ? `${product.name} — TeeLab` : 'Ürün bulunamadı — TeeLab';
+    document.title = product ? `${product.name} — ${brand.name}` : `Ürün bulunamadı — ${brand.name}`;
     const existing = document.getElementById('product-json-ld');
     existing?.remove();
     if (!product) return;
@@ -42,7 +45,7 @@ function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
       '@type': 'Product',
       name: product.name,
       description: product.description,
-      brand: { '@type': 'Brand', name: 'TeeLab' },
+      brand: { '@type': 'Brand', name: brand.name },
       offers: { '@type': 'Offer', priceCurrency: 'TRY', price: product.price, availability: 'https://schema.org/InStock' },
     });
     document.head.appendChild(script);
@@ -57,6 +60,8 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isStudio = location.pathname === '/studio';
+  const isAdmin = location.pathname === '/yonetim';
+  const hasStorefrontShell = !isStudio && !isAdmin;
   const [cart, setCart] = useState<CartItem[]>(readCart);
   const cartCount = useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
@@ -73,19 +78,20 @@ export default function App() {
   return (
     <div className="app-shell">
       <ScrollManager />
-      {!isStudio && <Header cartCount={cartCount} />}
+      {hasStorefrontShell && <Header cartCount={cartCount} />}
       <Routes>
         <Route path="/" element={<Catalog onCustomize={() => navigate('/studio')} onProduct={(product) => navigate(`/koleksiyon/${product.id}`)} />} />
         <Route path="/koleksiyon/:slug" element={<ProductRoute onAdd={addToCart} />} />
         <Route path="/studio" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Stüdyo hazırlanıyor…</span></div>}><Studio onBack={() => navigate('/')} onAdd={addToCart} /></Suspense>} />
+        <Route path="/yonetim" element={<Suspense fallback={<div className="route-loader"><Logo /><span>Yönetim paneli hazırlanıyor…</span></div>}><AdminDashboard /></Suspense>} />
         <Route path="/sepet" element={<CartPage items={cart} onUpdate={updateQuantity} onComplete={() => setCart([])} onContinue={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {!isStudio && <footer>
+      {hasStorefrontShell && <footer>
         <Logo inverse />
-        <p>Fikrini giy. · İstanbul'da tasarlandı.</p>
+        <p>{brand.tagline} · {brand.city}'da tasarlandı.</p>
         <nav aria-label="Alt menü"><a href="/#koleksiyon">Koleksiyon</a><a href="/studio">Stüdyo</a><a href="/sepet">Sepet</a></nav>
-        <small>© 2026 TeeLab · Dijital baskı stüdyosu</small>
+        <small>© 2026 {brand.name} · Dijital baskı stüdyosu</small>
       </footer>}
     </div>
   );
