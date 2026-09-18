@@ -28,7 +28,7 @@ export function CartPage({ items, onUpdate, onComplete, onContinue }: Props) {
     saveDemoOrder(values, items); onComplete(); setCompleted(true); window.setTimeout(() => successRef.current?.focus(), 0);
   };
 
-  if (completed) return <main className="checkout-success" aria-labelledby="checkout-success-title"><span><CheckCircle2 /></span><p className="eyebrow">DEMO SİPARİŞ</p><h1 id="checkout-success-title" ref={successRef} tabIndex={-1}>Demo talebin hazır.</h1><p>Bu bir demo akışıdır; ödeme alınmadı ve sipariş iletilmedi. Sepetindeki ürünler, demo tamamlanması sonrası açıkça temizlendi.</p><button className="button button--primary" onClick={() => { setCompleted(false); onContinue(); }}>Koleksiyona dön</button></main>;
+  if (completed) return <main className="checkout-success" aria-labelledby="checkout-success-title"><span><CheckCircle2 /></span><p className="eyebrow">DEMO SİPARİŞ</p><h1 id="checkout-success-title" ref={successRef} tabIndex={-1}>Demo talebin hazır.</h1><p>Ödeme alınmadı; sipariş bu tarayıcıdaki yönetim paneline demo olarak iletildi. Sepetindeki ürünler demo tamamlandıktan sonra temizlendi.</p><button className="button button--primary" onClick={() => { setCompleted(false); onContinue(); }}>Koleksiyona dön</button></main>;
 
   return <main className="cart-page">
     <header className="page-intro"><span className="eyebrow">SEPETİN</span><h1>Seçtiklerin, tek yerde.</h1><p>Ürünlerini kontrol et, teslimat bilgilerini gir ve demo sipariş akışını tamamla.</p></header>

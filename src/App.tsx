@@ -9,7 +9,7 @@ import { products } from './data/products';
 import { brand } from './config/brand';
 import type { CartItem } from './types';
 import { CART_STORAGE_KEY, deserializeCart, mergeCartItem, serializeCart, updateCartQuantity } from './lib/cart';
-import { getVisibleStorefrontProducts } from './lib/storefrontManagement';
+import { getStorefrontProductRecord, STOREFRONT_MANAGEMENT_EVENT } from './lib/storefrontManagement';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -30,7 +30,19 @@ function ScrollManager() {
 function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const product = getVisibleStorefrontProducts(products).find((item) => item.id === slug);
+  const [record, setRecord] = useState(() => slug ? getStorefrontProductRecord(products, slug) : undefined);
+  const product = record?.product;
+
+  useEffect(() => {
+    const refreshProduct = () => setRecord(slug ? getStorefrontProductRecord(products, slug) : undefined);
+    refreshProduct();
+    window.addEventListener('storage', refreshProduct);
+    window.addEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProduct);
+    return () => {
+      window.removeEventListener('storage', refreshProduct);
+      window.removeEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProduct);
+    };
+  }, [slug]);
 
   useEffect(() => {
     document.title = product ? `${product.name} — ${brand.name}` : `Ürün bulunamadı — ${brand.name}`;
@@ -46,14 +58,14 @@ function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
       name: product.name,
       description: product.description,
       brand: { '@type': 'Brand', name: brand.name },
-      offers: { '@type': 'Offer', priceCurrency: 'TRY', price: product.price, availability: 'https://schema.org/InStock' },
+      offers: { '@type': 'Offer', priceCurrency: 'TRY', price: product.price, availability: (record?.stock ?? 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' },
     });
     document.head.appendChild(script);
     return () => script.remove();
-  }, [product]);
+  }, [product, record?.stock]);
 
-  if (!product) return <Navigate to="/" replace />;
-  return <ProductDetail product={product} onBack={() => navigate('/#koleksiyon')} onCustomize={() => navigate('/studio')} onAdd={onAdd} />;
+  if (!product || !record) return <Navigate to="/" replace />;
+  return <ProductDetail product={product} stock={record.stock} onBack={() => navigate('/#koleksiyon')} onCustomize={() => navigate('/studio')} onAdd={onAdd} />;
 }
 
 export default function App() {

@@ -51,7 +51,11 @@ export function getManagedProductRecords(baseProducts: Product[]): ManagedProduc
 }
 
 export function getVisibleStorefrontProducts(baseProducts: Product[]) {
-  return getManagedProductRecords(baseProducts).filter((item) => item.visible && item.stock > 0).map((item) => item.product);
+  return getManagedProductRecords(baseProducts).filter((item) => item.visible).map((item) => item.product);
+}
+
+export function getStorefrontProductRecord(baseProducts: Product[], productId: string) {
+  return getManagedProductRecords(baseProducts).find((item) => item.visible && item.product.id === productId);
 }
 
 export function filterManagedProducts(records: ManagedProductRecord[], query: string) {
@@ -70,7 +74,7 @@ export function updateManagedProduct(productId: string, update: Partial<Pick<Man
   writeStorefrontManagement(state);
 }
 
-export function createManagedProduct(name: string, description: string, price: number) {
+export function createManagedProduct(name: string, description: string, price: number, artwork: Product['artwork']) {
   const state = readStorefrontManagement();
   const baseId = name.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'yeni-urun';
   let id = baseId;
@@ -83,7 +87,7 @@ export function createManagedProduct(name: string, description: string, price: n
     description: description.trim(),
     price: Math.max(1, Math.round(price)),
     colors: ['white', 'black'],
-    artwork: 'typography',
+    artwork,
   };
   state.customProducts.push(product);
   state.productSettings[id] = { visible: true, stock: 20 };

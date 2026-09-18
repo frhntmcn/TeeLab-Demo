@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { brand } from '../config/brand';
 import { colorHex, colorNames, products } from '../data/products';
 import { formatTRY } from '../lib/pricing';
-import { getVisibleStorefrontProducts, STOREFRONT_MANAGEMENT_EVENT } from '../lib/storefrontManagement';
+import { getManagedProductRecords, STOREFRONT_MANAGEMENT_EVENT } from '../lib/storefrontManagement';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -15,10 +15,10 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
   ];
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const [visibleProducts, setVisibleProducts] = useState(() => getVisibleStorefrontProducts(products));
+  const [visibleProducts, setVisibleProducts] = useState(() => getManagedProductRecords(products).filter((item) => item.visible));
 
   useEffect(() => {
-    const refreshProducts = () => setVisibleProducts(getVisibleStorefrontProducts(products));
+    const refreshProducts = () => setVisibleProducts(getManagedProductRecords(products).filter((item) => item.visible));
     window.addEventListener('storage', refreshProducts);
     window.addEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProducts);
     return () => {
@@ -88,16 +88,17 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           <p>Her parça ön ve arka yüzüyle birlikte düşünülür. Baskı dokusu, kumaş ve renk tek bir kompozisyonda buluşur.</p>
         </header>
         <div className="editorial-product-grid">
-          {visibleProducts.map((product, index) => (
+          {visibleProducts.map(({ product, stock }, index) => (
             <article className="editorial-product" key={product.id}>
               <button className="editorial-product__visual" onClick={() => onProduct(product)} aria-label={`${product.name} ürününü incele`}>
                 <span className="editorial-product__number">0{index + 1}</span>
+                {stock === 0 && <span className="editorial-product__sold-out">TÜKENDİ</span>}
                 <div><ShirtVisual color={product.colors[0]} side="front" artwork={product.artwork} label={`${product.name} ön görünümü`} /><small>ÖN</small></div>
                 <div><ShirtVisual color={product.colors[0]} side="back" artwork={product.artwork} label={`${product.name} arka görünümü`} /><small>ARKA</small></div>
               </button>
               <div className="editorial-product__info">
                 <div><h3>{product.name}</h3><p>{product.description}</p></div>
-                <strong>{formatTRY(product.price)}</strong>
+                <strong>{stock === 0 ? 'Tükendi' : formatTRY(product.price)}</strong>
               </div>
               <div className="editorial-product__footer">
                 <div className="swatches" aria-label="Renk seçenekleri">{product.colors.map((color) => <span key={color} title={colorNames[color]} style={{ background: colorHex[color] }} />)}</div>

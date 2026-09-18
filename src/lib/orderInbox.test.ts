@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CartItem } from '../types';
-import { readDemoOrders, saveDemoOrder, updateDemoOrderStatus } from './orderInbox';
+import { readDemoOrders, readOrderStatusOverrides, saveDemoOrder, updateDemoOrderStatus } from './orderInbox';
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -18,15 +18,28 @@ const cartItem: CartItem = {
 
 describe('order inbox', () => {
   beforeEach(() => storage.clear());
+  afterEach(() => vi.restoreAllMocks());
 
   it('moves a completed storefront order into the admin inbox', () => {
     const order = saveDemoOrder({ name: 'Test Müşteri', phone: '05555555555', email: 'test@example.com', address: 'Test adresi' }, [cartItem]);
-    expect(readDemoOrders()[0]).toMatchObject({ id: order.id, customer: 'Test Müşteri', status: 'Yeni sipariş', total: 1198 });
+    expect(readDemoOrders()[0]).toMatchObject({ id: order.id, customer: 'Test Müşteri', detail: 'Beyaz · M beden · 2 adet', status: 'Yeni sipariş', total: 1198 });
+  });
+
+  it('creates unique order references even in the same millisecond', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    const first = saveDemoOrder({ name: 'Bir', phone: '1', email: 'bir@example.com', address: 'Adres' }, [cartItem]);
+    const second = saveDemoOrder({ name: 'İki', phone: '2', email: 'iki@example.com', address: 'Adres' }, [cartItem]);
+    expect(first.id).not.toBe(second.id);
   });
 
   it('updates the persisted order status', () => {
     const order = saveDemoOrder({ name: 'Test Müşteri', phone: '05555555555', email: 'test@example.com', address: 'Test adresi' }, [cartItem]);
     updateDemoOrderStatus(order.id, 'Baskıda');
     expect(readDemoOrders()[0].status).toBe('Baskıda');
+  });
+
+  it('persists a status override for sample orders', () => {
+    updateDemoOrderStatus('#2048', 'Kargoya verildi');
+    expect(readOrderStatusOverrides()['#2048']).toBe('Kargoya verildi');
   });
 });

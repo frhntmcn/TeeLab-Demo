@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { products } from '../data/products';
-import { createManagedProduct, filterManagedProducts, getManagedProductRecords, getVisibleStorefrontProducts, updateManagedProduct } from './storefrontManagement';
+import { createManagedProduct, filterManagedProducts, getManagedProductRecords, getStorefrontProductRecord, getVisibleStorefrontProducts, updateManagedProduct } from './storefrontManagement';
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -21,9 +21,10 @@ describe('storefront management', () => {
   });
 
   it('creates a visible custom product with stock', () => {
-    const created = createManagedProduct('Yeni Ay', 'Yeni koleksiyon ürünü.', 700);
+    const created = createManagedProduct('Yeni Ay', 'Yeni koleksiyon ürünü.', 700, 'orbit');
     const record = getManagedProductRecords(products).find((item) => item.product.id === created.id);
     expect(record).toMatchObject({ visible: true, stock: 20, custom: true });
+    expect(created.artwork).toBe('orbit');
     expect(getVisibleStorefrontProducts(products).some((product) => product.id === created.id)).toBe(true);
   });
 
@@ -34,8 +35,14 @@ describe('storefront management', () => {
     expect(filterManagedProducts(records, 'çağdaş').map((item) => item.product.name)).toEqual(['Anadolu Form']);
   });
 
-  it('removes zero-stock products from the storefront', () => {
+  it('keeps a visible zero-stock product in the storefront record', () => {
     updateManagedProduct(products[1].id, { stock: 0 });
-    expect(getVisibleStorefrontProducts(products).some((product) => product.id === products[1].id)).toBe(false);
+    expect(getVisibleStorefrontProducts(products).some((product) => product.id === products[1].id)).toBe(true);
+    expect(getStorefrontProductRecord(products, products[1].id)?.stock).toBe(0);
+  });
+
+  it('removes a product only when visibility is disabled', () => {
+    updateManagedProduct(products[1].id, { visible: false });
+    expect(getStorefrontProductRecord(products, products[1].id)).toBeUndefined();
   });
 });
