@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --configLoader runner --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.app.json && vite --config vite.config.ts --configLoader runner build",
+    "build:studio": "tsc --noEmit -p tsconfig.app.json && vite --mode studio --config vite.config.ts --configLoader runner build",
     "lint": "eslint .",
     "preview": "vite --config vite.config.ts --configLoader runner preview --host 0.0.0.0",
     "test": "vitest run"

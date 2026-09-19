@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /studio/
+
+# Keep real files and directories (including Vite assets) untouched.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Let React Router serve direct URLs inside the studio only.
+RewriteRule ^ index.html [L]
