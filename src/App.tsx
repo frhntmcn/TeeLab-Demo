@@ -10,6 +10,7 @@ import { brand } from './config/brand';
 import type { CartItem } from './types';
 import { CART_STORAGE_KEY, deserializeCart, mergeCartItem, serializeCart, updateCartQuantity } from './lib/cart';
 import { getStorefrontProductRecord, STOREFRONT_MANAGEMENT_EVENT } from './lib/storefrontManagement';
+import { fetchWooCommerceProductOverrides } from './lib/woocommerce';
 
 const Studio = lazy(() => import('./components/Studio').then((module) => ({ default: module.Studio })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -42,6 +43,17 @@ function ProductRoute({ onAdd }: { onAdd: (item: CartItem) => void }) {
       window.removeEventListener('storage', refreshProduct);
       window.removeEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProduct);
     };
+  }, [slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!slug) return;
+    fetchWooCommerceProductOverrides().then((overrides) => {
+      const override = overrides[slug];
+      if (cancelled || !override) return;
+      setRecord((current) => current ? { ...current, stock: override.stock, product: { ...current.product, price: override.price } } : current);
+    });
+    return () => { cancelled = true; };
   }, [slug]);
 
   useEffect(() => {

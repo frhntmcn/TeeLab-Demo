@@ -21,10 +21,10 @@ describe('storefront management', () => {
   });
 
   it('creates a visible custom product with stock', () => {
-    const created = createManagedProduct('Yeni Ay', 'Yeni koleksiyon ürünü.', 700, 'orbit');
+    const created = createManagedProduct({ name: 'Yeni Ay', description: 'Yeni koleksiyon ürünü.', price: 700, category: 'Tişört', visible: true, variants: [] });
     const record = getManagedProductRecords(products).find((item) => item.product.id === created.id);
-    expect(record).toMatchObject({ visible: true, stock: 20, custom: true });
-    expect(created.artwork).toBe('orbit');
+    expect(record).toMatchObject({ visible: true, stock: 0, custom: true });
+    expect(created.artwork).toBe('typography');
     expect(getVisibleStorefrontProducts(products).some((product) => product.id === created.id)).toBe(true);
   });
 

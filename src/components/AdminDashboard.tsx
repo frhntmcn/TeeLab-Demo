@@ -11,8 +11,8 @@ import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
 import { type AdminOrder, type AdminOrderStatus, ORDER_INBOX_EVENT, readDemoOrders, readOrderStatusOverrides, updateDemoOrderStatus } from '../lib/orderInbox';
 import { formatTRY } from '../lib/pricing';
 import { createManagedProduct, filterManagedProducts, getManagedProductRecords, STOREFRONT_MANAGEMENT_EVENT, updateManagedProduct } from '../lib/storefrontManagement';
-import type { Product } from '../types';
 import { Logo } from './Logo';
+import { ProductEditor } from './ProductEditor';
 
 type AdminSection = 'home' | 'orders' | 'products' | 'designs' | 'customers' | 'settings';
 type AdminTheme = 'light' | 'dark';
@@ -39,12 +39,8 @@ const sampleOrders: AdminOrder[] = [
 ];
 
 const COMPLETED_TASKS_KEY = `${brand.storageNamespace}:completed-admin-tasks:v1`;
-const artworkOptions: { value: Product['artwork']; label: string }[] = [
-  { value: 'orbit', label: 'Gece Yörüngesi' },
-  { value: 'anatolia', label: 'Anadolu Form' },
-  { value: 'signal', label: 'Mor Sinyal' },
-  { value: 'typography', label: 'İyi Fikir' },
-];
+const PRODUCT_CATEGORIES_KEY = `${brand.storageNamespace}:product-categories:v1`;
+const DEFAULT_PRODUCT_CATEGORIES = ['Tişört', 'Sweatshirt', 'Aksesuar'];
 
 function readCompletedTasks() {
   try {
@@ -53,6 +49,17 @@ function readCompletedTasks() {
   } catch {
     return [];
   }
+}
+
+function readProductCategories() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PRODUCT_CATEGORIES_KEY) ?? 'null');
+    if (Array.isArray(parsed)) {
+      const categories = parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim());
+      if (categories.length) return Array.from(new Set(categories));
+    }
+  } catch { /* Bozuk kategori kaydı varsayılan listeye döner. */ }
+  return DEFAULT_PRODUCT_CATEGORIES;
 }
 
 function readAllOrders() {
@@ -84,11 +91,13 @@ export function AdminDashboard() {
   const [managedProducts, setManagedProducts] = useState(() => getManagedProductRecords(products));
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>(() => Object.fromEntries(getManagedProductRecords(products).map((item) => [item.product.id, String(item.stock)])));
   const [productFormOpen, setProductFormOpen] = useState(false);
-  const [productForm, setProductForm] = useState<{ name: string; description: string; price: string; artwork: Product['artwork'] }>({ name: '', description: '', price: '649', artwork: 'typography' });
+  const [productCategories, setProductCategories] = useState<string[]>(readProductCategories);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const today = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }).format(new Date());
 
   useEffect(() => { window.localStorage.setItem(`${brand.storageNamespace}:admin-theme`, theme); }, [theme]);
   useEffect(() => { window.localStorage.setItem(COMPLETED_TASKS_KEY, JSON.stringify(completedTasks)); }, [completedTasks]);
+  useEffect(() => { window.localStorage.setItem(PRODUCT_CATEGORIES_KEY, JSON.stringify(productCategories)); }, [productCategories]);
   useEffect(() => {
     const refreshOrders = () => setOrders(readAllOrders());
     const refreshProducts = () => {
@@ -119,7 +128,6 @@ export function AdminDashboard() {
   const closeOrderDialog = useCallback(() => setSelectedOrder(null), []);
   const closeProductDialog = useCallback(() => setProductFormOpen(false), []);
   const orderDialogRef = useAccessibleDialog<HTMLElement>(Boolean(selectedOrder), closeOrderDialog);
-  const productDialogRef = useAccessibleDialog<HTMLFormElement>(productFormOpen, closeProductDialog, '#admin-new-product-button');
 
   const goTo = (section: AdminSection) => { setActiveSection(section); setQuery(''); setNotice(''); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const completeTask = (id: string) => {
@@ -149,14 +157,25 @@ export function AdminDashboard() {
     changeProduct(id, { stock: nextStock });
     setStockDrafts((current) => ({ ...current, [id]: String(nextStock) }));
   };
-  const addProduct = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!productForm.name.trim() || !productForm.description.trim() || Number(productForm.price) <= 0) return;
-    createManagedProduct(productForm.name, productForm.description, Number(productForm.price), productForm.artwork);
+  const addProduct = (input: Parameters<typeof createManagedProduct>[0]) => {
+    createManagedProduct(input);
     setManagedProducts(getManagedProductRecords(products));
-    setProductForm({ name: '', description: '', price: '649', artwork: 'typography' });
     setProductFormOpen(false);
-    setNotice('Yeni ürün oluşturuldu ve mağazada yayına alındı.');
+    setNotice(input.visible ? 'Yeni ürün mağazada yayınlandı.' : 'Yeni ürün taslak olarak kaydedildi.');
+  };
+  const addCategory = (value = newCategoryName) => {
+    const category = value.trim();
+    if (!category) return undefined;
+    const existing = productCategories.find((item) => item.toLocaleLowerCase('tr-TR') === category.toLocaleLowerCase('tr-TR'));
+    if (existing) {
+      setNewCategoryName('');
+      return existing;
+    } else {
+      setProductCategories((current) => [...current, category]);
+    }
+    setNewCategoryName('');
+    setNotice(`“${category}” kategorisi eklendi.`);
+    return category;
   };
 
   const renderOrders = (compact = false) => (
@@ -194,7 +213,7 @@ export function AdminDashboard() {
       <main className="admin-main"><header className="admin-topbar"><div><p className="admin-eyebrow">{today}</p><h1>{activeSection === 'home' ? 'Günaydın.' : navigation.find((item) => item.id === activeSection)?.label}</h1><p>{activeSection === 'home' ? `Bugün ilgilenmen gereken ${pendingTasks.length} işin var.` : 'Değişiklikler bu tarayıcıda otomatik olarak saklanır.'}</p></div><div className={`admin-topbar-actions ${['designs', 'customers', 'settings'].includes(activeSection) ? 'admin-topbar-actions--without-search' : ''}`}>{!['designs', 'customers', 'settings'].includes(activeSection) && <label className="admin-search"><Search size={20} aria-hidden="true" /><span className="sr-only">{activeSection === 'products' ? 'Ürün ara' : 'Sipariş veya müşteri ara'}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={activeSection === 'products' ? 'Ürün adı veya açıklaması ara' : 'Sipariş, ürün veya müşteri ara'} /></label>}<button className="admin-icon-button" type="button" aria-label={theme === 'light' ? 'Koyu moda geç' : 'Açık moda geç'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={21} /> : <Sun size={21} />}</button><button className="admin-icon-button" type="button" aria-label="Bildirimleri aç" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}><Bell size={21} /><span aria-label={`${newOrderCount} yeni bildirim`} /></button></div>{notificationsOpen && <div className="admin-notifications" role="status"><strong>Bildirimler</strong><p>{newOrderCount ? `${newOrderCount} yeni sipariş mağazadan yönetim paneline ulaştı.` : 'Şu anda yeni bildirimin yok.'}</p><button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Bildirimleri kapat"><X size={17} /></button></div>}</header>
         <div className="admin-content">{notice && <div className="admin-notice" role="status"><CheckCircle2 size={19} />{notice}<button type="button" aria-label="Bildirimi kapat" onClick={() => setNotice('')}><X size={17} /></button></div>}{activeSection === 'home' && renderHome()}{activeSection === 'orders' && renderOrders()}{activeSection === 'products' && renderProducts()}{['designs', 'customers', 'settings'].includes(activeSection) && renderSimpleSection()}</div></main>
       {selectedOrder && <div className="admin-modal-backdrop" role="presentation" onMouseDown={closeOrderDialog}><section ref={orderDialogRef} className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="order-dialog-title" tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}><button className="admin-modal-close" type="button" onClick={closeOrderDialog} aria-label="Siparişi kapat"><X /></button><p className="admin-section-kicker">SİPARİŞ DETAYI</p><h2 id="order-dialog-title">{selectedOrder.id}</h2><dl><div><dt>Müşteri</dt><dd>{selectedOrder.customer}</dd></div><div><dt>Ürün</dt><dd>{selectedOrder.product}</dd></div><div><dt>Toplam</dt><dd>{formatTRY(selectedOrder.total)}</dd></div></dl><label>Sipariş durumu<select value={selectedOrder.status} onChange={(event) => changeOrderStatus(selectedOrder, event.target.value as AdminOrderStatus)}>{(['Yeni sipariş', 'Üretime hazır', 'Baskıda', 'Kargoya verildi'] as AdminOrderStatus[]).map((status) => <option key={status}>{status}</option>)}</select></label><button className="admin-action admin-action--primary" type="button" onClick={closeOrderDialog}>Kaydet ve kapat</button></section></div>}
-      {productFormOpen && <div className="admin-modal-backdrop" role="presentation" onMouseDown={closeProductDialog}><form ref={productDialogRef as React.RefObject<HTMLFormElement>} className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="product-dialog-title" tabIndex={-1} onSubmit={addProduct} onMouseDown={(event) => event.stopPropagation()}><button className="admin-modal-close" type="button" onClick={closeProductDialog} aria-label="Formu kapat"><X /></button><p className="admin-section-kicker">YENİ ÜRÜN</p><h2 id="product-dialog-title">Mağazaya ürün ekle</h2><label>Ürün adı<input required value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} /></label><label>Kısa açıklama<textarea required rows={3} value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} /></label><label>Fiyat (₺)<input required type="number" min="1" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} /></label><label>Hazır ürün görseli<select value={productForm.artwork} onChange={(event) => setProductForm((current) => ({ ...current, artwork: event.target.value as Product['artwork'] }))}>{artworkOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><p className="admin-form-note">Yeni ürün seçtiğin hazır görselle ve 20 adet stokla yayınlanır.</p><button className="admin-action admin-action--primary" type="submit">Ürünü oluştur ve yayınla</button></form></div>}
+      {productFormOpen && <ProductEditor categories={productCategories} onAddCategory={addCategory} onClose={closeProductDialog} onSave={addProduct} />}
     </div>
   );
 }

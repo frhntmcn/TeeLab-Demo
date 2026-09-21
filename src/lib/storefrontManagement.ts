@@ -1,5 +1,5 @@
 import { brand } from '../config/brand';
-import type { Product } from '../types';
+import type { Product, ShirtSize } from '../types';
 
 export const STOREFRONT_MANAGEMENT_EVENT = `${brand.storageNamespace}:storefront-management-change`;
 const STORAGE_KEY = `${brand.storageNamespace}:storefront-management:v1`;
@@ -9,11 +9,36 @@ export interface ManagedProductRecord {
   visible: boolean;
   stock: number;
   custom: boolean;
+  category?: string;
+  imageDataUrl?: string;
+  variants: ProductVariant[];
 }
+
+export interface ProductVariant {
+  color: string;
+  hex: string;
+  sizeStocks: Record<ShirtSize, number>;
+}
+
+export interface NewManagedProduct {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageDataUrl?: string;
+  variants: ProductVariant[];
+  visible: boolean;
+}
+
+type StoredCustomProduct = Product & {
+  category?: string;
+  imageDataUrl?: string;
+  variants?: ProductVariant[];
+};
 
 interface StorefrontManagementState {
   productSettings: Record<string, { visible: boolean; stock: number }>;
-  customProducts: Product[];
+  customProducts: StoredCustomProduct[];
 }
 
 const emptyState = (): StorefrontManagementState => ({ productSettings: {}, customProducts: [] });
@@ -41,11 +66,17 @@ export function getManagedProductRecords(baseProducts: Product[]): ManagedProduc
   const state = readStorefrontManagement();
   return [...baseProducts, ...state.customProducts].map((product) => {
     const setting = state.productSettings[product.id];
+    const customProduct = state.customProducts.find((item) => item.id === product.id);
+    const variants = customProduct?.variants ?? [];
+    const variantStock = variants.length ? variants.reduce((total, variant) => total + Object.values(variant.sizeStocks).reduce((subtotal, stock) => subtotal + stock, 0), 0) : undefined;
     return {
       product,
       visible: setting?.visible ?? true,
-      stock: setting?.stock ?? 20,
-      custom: state.customProducts.some((item) => item.id === product.id),
+      stock: setting?.stock ?? variantStock ?? 20,
+      custom: Boolean(customProduct),
+      category: customProduct?.category,
+      imageDataUrl: customProduct?.imageDataUrl,
+      variants,
     };
   });
 }
@@ -74,23 +105,27 @@ export function updateManagedProduct(productId: string, update: Partial<Pick<Man
   writeStorefrontManagement(state);
 }
 
-export function createManagedProduct(name: string, description: string, price: number, artwork: Product['artwork']) {
+export function createManagedProduct(input: NewManagedProduct) {
   const state = readStorefrontManagement();
-  const baseId = name.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'yeni-urun';
+  const baseId = input.name.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'yeni-urun';
   let id = baseId;
   let suffix = 2;
   const ids = new Set(state.customProducts.map((product) => product.id));
   while (ids.has(id)) id = `${baseId}-${suffix++}`;
-  const product: Product = {
+  const product: StoredCustomProduct = {
     id,
-    name: name.trim(),
-    description: description.trim(),
-    price: Math.max(1, Math.round(price)),
+    name: input.name.trim(),
+    description: input.description.trim(),
+    price: Math.max(1, Math.round(input.price)),
     colors: ['white', 'black'],
-    artwork,
+    artwork: 'typography',
+    category: input.category.trim(),
+    imageDataUrl: input.imageDataUrl,
+    variants: input.variants,
   };
   state.customProducts.push(product);
-  state.productSettings[id] = { visible: true, stock: 20 };
+  const totalStock = input.variants.reduce((total, variant) => total + Object.values(variant.sizeStocks).reduce((subtotal, stock) => subtotal + stock, 0), 0);
+  state.productSettings[id] = { visible: input.visible, stock: totalStock };
   writeStorefrontManagement(state);
   return product;
 }

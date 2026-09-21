@@ -4,6 +4,7 @@ import { brand } from '../config/brand';
 import { colorHex, colorNames, products } from '../data/products';
 import { formatTRY } from '../lib/pricing';
 import { getManagedProductRecords, STOREFRONT_MANAGEMENT_EVENT } from '../lib/storefrontManagement';
+import { fetchWooCommerceProductOverrides } from '../lib/woocommerce';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -16,6 +17,18 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [visibleProducts, setVisibleProducts] = useState(() => getManagedProductRecords(products).filter((item) => item.visible));
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchWooCommerceProductOverrides().then((overrides) => {
+      if (cancelled || !Object.keys(overrides).length) return;
+      setVisibleProducts(getManagedProductRecords(products).filter((item) => item.visible).map((item) => {
+        const override = overrides[item.product.id];
+        return override ? { ...item, stock: override.stock, product: { ...item.product, price: override.price } } : item;
+      }));
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const refreshProducts = () => setVisibleProducts(getManagedProductRecords(products).filter((item) => item.visible));

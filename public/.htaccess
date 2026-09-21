@@ -1,7 +1,16 @@
 RewriteEngine On
-RewriteBase /studio/
 
-# Keep real files and directories (including Vite assets) untouched.
+# Serve the React storefront at the domain root while retaining the existing
+# WordPress files for recovery and administration.
+DirectoryIndex index.html index.php
+
+# Keep WordPress REST requests on WordPress. Without this explicit route, the
+# storefront SPA fallback would return React's index.html for /wp-json/*.
+RewriteRule ^wp-json(?:/(.*))?$ index.php?rest_route=/$1 [QSA,L]
+
+# Keep real files and directories (including Vite assets) untouched. This file
+# is intentionally relative so the same build works at the domain root and
+# under /studio/.
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
