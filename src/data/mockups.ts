@@ -6,11 +6,21 @@ import backWhite from '../assets/mockups/back-white.webp';
 import backBlack from '../assets/mockups/back-black.webp';
 import backBeige from '../assets/mockups/back-beige.webp';
 import backPurple from '../assets/mockups/back-purple.webp';
-import type { MockupPrintArea, ShirtColor, Side } from '../types';
+import frontWhiteOversize from '../assets/mockups/front-white-oversize.png';
+import frontBlackOversize from '../assets/mockups/front-black-oversize.png';
+import backWhiteOversize from '../assets/mockups/back-white-oversize.png';
+import backBlackOversize from '../assets/mockups/back-black-oversize.png';
+import type { MockupPrintArea, ShirtColor, ShirtFit, Side } from '../types';
 
-export const mockupImages: Record<Side, Record<ShirtColor, string>> = {
-  front: { white: frontWhite, black: frontBlack, beige: frontBeige, purple: frontPurple },
-  back: { white: backWhite, black: backBlack, beige: backBeige, purple: backPurple },
+export const mockupImages: Record<ShirtFit, Record<Side, Record<ShirtColor, string>>> = {
+  slim: {
+    front: { white: frontWhite, black: frontBlack, beige: frontBeige, purple: frontPurple },
+    back: { white: backWhite, black: backBlack, beige: backBeige, purple: backPurple },
+  },
+  oversize: {
+    front: { white: frontWhiteOversize, black: frontBlackOversize, beige: frontBeige, purple: frontPurple },
+    back: { white: backWhiteOversize, black: backBlackOversize, beige: backBeige, purple: backPurple },
+  },
 };
 
 /**

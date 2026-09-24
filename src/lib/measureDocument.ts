@@ -10,7 +10,7 @@ export async function measureDocument(
   if (!document || !Array.isArray(document.objects)) return [];
   try {
     const objects = await deps.enliven(document.objects);
-    return objects.map((object) => {
+    return objects.filter((object) => (object as MetaObject).visible !== false).map((object) => {
       const measured = object as MetaObject;
       constrainObject(measured);
       return getMeasurement(measured, side);

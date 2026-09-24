@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { mockupImages, mockupPrintAreas } from '../data/mockups';
-import type { ShirtColor, Side } from '../types';
+import type { ShirtColor, ShirtFit, Side } from '../types';
 
 interface MockupProps {
   color: ShirtColor;
+  fit?: ShirtFit;
   side?: Side;
   designUrl?: string;
   designContent?: ReactNode;
@@ -13,7 +14,7 @@ interface MockupProps {
   label?: string;
 }
 
-export function Mockup({ color, side = 'front', designUrl, designContent, editor, showGuide = false, className = '', label }: MockupProps) {
+export function Mockup({ color, fit = 'slim', side = 'front', designUrl, designContent, editor, showGuide = false, className = '', label }: MockupProps) {
   const area = mockupPrintAreas[side];
   const areaStyle = {
     '--print-left': `${area.leftPercent}%`, '--print-top': `${area.topPercent}%`,
@@ -22,7 +23,7 @@ export function Mockup({ color, side = 'front', designUrl, designContent, editor
 
   return (
     <div className={`realistic-mockup ${className}`} style={areaStyle} aria-label={label ?? `${side === 'front' ? 'Ön' : 'Arka'} yüz tişört mockup'ı`}>
-      <img className="mockup-base" src={mockupImages[side][color]} alt="" aria-hidden="true" />
+      <img className="mockup-base" src={mockupImages[fit][side][color]} alt="" aria-hidden="true" />
       <div className={`mockup-print-layer ${showGuide ? 'mockup-print-layer--guide' : ''}`}>
         {designUrl && <img src={designUrl} alt="Tasarım baskı önizlemesi" />}
         {designContent}

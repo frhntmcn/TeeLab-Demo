@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="view-transition" content="same-origin">
+  <title>Maymoon - Ürün Düzenleyici</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://api.fontshare.com/v2/css?f[]=manrope@400,500,600,700,800&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #111827;
+      --purple: #7C3AED;
+      --paper: #F5F3EE;
+      --muted: #52525B;
+      --line: #E5E7EB;
+    }
+    body {
+      font-family: 'Manrope', sans-serif;
+      background-color: var(--paper);
+      color: var(--navy);
+    }
+    .glass-header {
+      background: rgba(245, 243, 238, 0.9);
+      backdrop-filter: blur(8px);
+    }
+
+    html {
+      background-color: var(--paper);
+    }
+    @view-transition {
+      navigation: auto;
+    }
+    ::view-transition {
+      background-color: var(--paper);
+    }
+    ::view-transition-old(sidebar),
+    ::view-transition-new(sidebar) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+    ::view-transition-old(topbar),
+    ::view-transition-new(topbar) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+    ::view-transition-old(main-content) {
+      animation: 0.25s ease-out both fade-out;
+    }
+    ::view-transition-new(main-content) {
+      animation: 0.25s ease-in 0.1s both fade-in;
+    }
+    @keyframes fade-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#111827',
+            purple: '#7C3AED',
+            paper: '#F5F3EE',
+            muted: '#52525B',
+            line: '#E5E7EB',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="prefetch" href="https://p.superdesign.dev/draft/370a219b-8d37-40f4-a132-68e6654f6989" as="document">
+  <link rel="prefetch" href="https://p.superdesign.dev/draft/cabc5d10-b48b-44cc-8b4a-e6497957c0b2" as="document">
+</head>
+<body>
+  <div class="min-h-screen flex w-full max-w-[1440px] mx-auto bg-paper">
+
+    <!-- Sidebar Navigation - Persistent -->
+    <aside class="w-64 border-r border-line flex flex-col bg-white sticky top-0 h-screen hidden md:flex" style="view-transition-name: sidebar">
+      <div class="p-6 flex items-center gap-3 border-b border-line min-h-[80px]">
+        <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/brand-assets/public-favicon.svg/favicon.svg" alt="Maymoon Logo" class="w-10 h-10 rounded-lg shadow-sm">
+        <span class="font-extrabold text-xl tracking-tight text-navy">Maymoon</span>
+      </div>
+
+      <nav class="flex-1 px-4 py-6 space-y-2">
+        <a href="https://p.superdesign.dev/draft/370a219b-8d37-40f4-a132-68e6654f6989" id="nav-home" class="flex items-center gap-3 px-4 py-3 text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:layout-dashboard" class="text-xl"></iconify-icon>
+          <span class="text-base">Ana Sayfa</span>
+        </a>
+        <a href="#orders" id="nav-orders" class="flex items-center gap-3 px-4 py-3 text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:shopping-bag" class="text-xl"></iconify-icon>
+          <span class="text-base">Siparişler</span>
+        </a>
+        <a href="https://p.superdesign.dev/draft/cabc5d10-b48b-44cc-8b4a-e6497957c0b2" id="nav-products" class="flex items-center gap-3 px-4 py-3 bg-purple/10 text-purple font-bold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:shirt" class="text-xl"></iconify-icon>
+          <span class="text-base">Ürünler</span>
+        </a>
+        <a href="#designs" id="nav-designs" class="flex items-center gap-3 px-4 py-3 text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:palette" class="text-xl"></iconify-icon>
+          <span class="text-base">Tasarımlar</span>
+        </a>
+        <a href="#customers" id="nav-customers" class="flex items-center gap-3 px-4 py-3 text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>
+          <span class="text-base">Müşteriler</span>
+        </a>
+        <a href="#settings" id="nav-settings" class="flex items-center gap-3 px-4 py-3 text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[44px]">
+          <iconify-icon icon="lucide:settings" class="text-xl"></iconify-icon>
+          <span class="text-base">Ayarlar</span>
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-line">
+        <button id="nav-user-profile" class="flex items-center gap-3 px-4 py-3 w-full text-left text-muted hover:bg-gray-50 hover:text-navy font-semibold rounded-xl transition-colors min-h-[64px]">
+          <div class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center font-bold text-lg">
+            AY
+          </div>
+          <div class="flex flex-col">
+            <span class="text-base text-navy">Ali Yılmaz</span>
+            <span class="text-base text-muted font-medium">Mağaza Yöneticisi</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto relative w-full" style="view-transition-name: main-content">
+
+      <!-- Header -->
+      <header class="sticky top-0 z-10 glass-header px-4 md:px-8 py-5 border-b border-line flex justify-between items-center min-h-[80px]" style="view-transition-name: topbar">
+        <div class="flex items-center gap-4">
+          <a href="https://p.superdesign.dev/draft/370a219b-8d37-40f4-a132-68e6654f6989" id="mobile-menu-btn" class="md:hidden flex items-center justify-center w-11 h-11 rounded-xl border border-line bg-white text-navy">
+            <iconify-icon icon="lucide:menu" class="text-xl"></iconify-icon>
+          </a>
+          <div>
+            <div class="flex items-center gap-2">
+              <a href="#products" id="back-btn" class="text-muted hover:text-navy transition-colors flex items-center justify-center w-11 h-11 -ml-3">
+                <iconify-icon icon="lucide:arrow-left" class="text-2xl"></iconify-icon>
+              </a>
+              <h1 class="text-xl md:text-2xl font-extrabold text-navy tracking-tight">Yeni Ürün</h1>
+            </div>
+            <p class="text-muted text-base font-medium mt-1">Mağazaya yeni bir tişört modeli ekle.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 hidden md:flex">
+          <div class="relative">
+            <iconify-icon icon="lucide:search" class="absolute left-4 top-1/2 -translate-y-1/2 text-muted text-xl"></iconify-icon>
+            <input type="text" id="search-input" placeholder="Sipariş, ürün veya müşteri ara..." class="pl-12 pr-4 py-3 min-h-[44px] w-80 bg-white border border-line rounded-xl text-base focus:outline-none focus:border-purple focus:ring-2 focus:ring-purple/20 transition-all">
+          </div>
+          <button id="notifications-btn" class="w-11 h-11 flex items-center justify-center bg-white border border-line rounded-xl text-navy hover:border-purple hover:text-purple transition-all relative">
+            <iconify-icon icon="lucide:bell" class="text-xl"></iconify-icon>
+            <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-purple rounded-full"></span>
+          </button>
+        </div>
+      </header>
+
+      <div class="p-4 md:p-8 max-w-6xl mx-auto flex flex-col lg:flex-row gap-8">
+
+        <!-- Editor Form -->
+        <div class="flex-1 space-y-8">
+
+          <!-- Temel Bilgiler -->
+          <section class="bg-white rounded-2xl border border-line p-6 md:p-8 shadow-sm">
+            <h2 class="text-xl font-bold text-navy mb-6 border-b border-line pb-4">Temel bilgiler</h2>
+            <div class="space-y-6">
+              <div>
+                <label for="product-name" class="block text-base font-bold text-navy mb-2">Ürün adı <span class="text-red-500">*</span></label>
+                <input type="text" id="product-name" placeholder="Örn: Gece Yörüngesi" class="w-full px-4 py-3 min-h-[44px] bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors">
+              </div>
+              <div>
+                <label for="product-desc" class="block text-base font-bold text-navy mb-2">Kısa açıklama <span class="text-red-500">*</span></label>
+                <textarea id="product-desc" rows="4" placeholder="Ürünün kumaş, kalıp ve tasarım detaylarını anlatın." class="w-full px-4 py-3 bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors resize-none"></textarea>
+              </div>
+              <div>
+                 <label for="product-category" class="block text-base font-bold text-navy mb-2">Kategori</label>
+                 <div class="flex flex-col gap-3">
+                   <select id="product-category" class="w-full px-4 py-3 min-h-[44px] bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors appearance-none">
+                     <option value="" disabled selected>Kategori seçin...</option>
+                     <option>Tişört (Oversize)</option>
+                     <option>Tişört (Regular)</option>
+                     <option>Sweatshirt</option>
+                   </select>
+                   <div class="flex items-center gap-2">
+                     <button id="add-category-btn" class="text-purple font-bold text-base flex items-center gap-1 hover:text-purple/80 transition-colors">
+                       <iconify-icon icon="lucide:plus"></iconify-icon> Yeni kategori ekle
+                     </button>
+                   </div>
+                   <!-- Inline add category state (hidden by default, shown for demonstration) -->
+                   <div id="new-category-form" class="hidden flex items-center gap-2 mt-2 bg-gray-50 p-3 rounded-xl border border-line">
+                     <input type="text" placeholder="Kategori adı" class="flex-1 px-3 py-2 min-h-[44px] bg-white border border-line rounded-lg text-navy text-base focus:outline-none focus:border-purple">
+                     <button class="px-4 py-2 min-h-[44px] bg-navy text-white font-bold rounded-lg hover:bg-gray-800 transition-colors">Kaydet</button>
+                     <button class="px-4 py-2 min-h-[44px] bg-white border border-line text-navy font-bold rounded-lg hover:bg-gray-50 transition-colors">İptal</button>
+                   </div>
+                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Görseller -->
+          <section class="bg-white rounded-2xl border border-line p-6 md:p-8 shadow-sm">
+             <h2 class="text-xl font-bold text-navy mb-6 border-b border-line pb-4">Tasarım Görseli</h2>
+
+             <p class="text-base text-muted mb-4">Yayınlamak için en az bir ana ürün görseli yüklemelisin.</p>
+             <div class="flex flex-col md:flex-row gap-4">
+               <!-- Primary Image Upload -->
+               <button id="upload-primary" class="flex-1 aspect-square md:aspect-auto md:h-64 border-2 border-dashed border-purple/50 rounded-xl p-6 text-center bg-purple/5 hover:bg-purple/10 transition-colors cursor-pointer flex flex-col items-center justify-center relative group">
+                 <span class="absolute top-3 left-3 bg-purple text-white text-sm font-bold py-1 px-3 rounded-lg">Ana Görsel *</span>
+                 <iconify-icon icon="lucide:image-plus" class="text-4xl text-purple mb-3"></iconify-icon>
+                 <p class="font-bold text-navy text-base">Tıkla veya sürükle</p>
+                 <p class="text-base text-muted mt-1">PNG, JPG (Maks 5MB)</p>
+               </button>
+               <!-- Secondary Image Uploads -->
+               <div class="flex flex-row md:flex-col gap-4 w-full md:w-48 overflow-x-auto pb-2 md:pb-0">
+                 <button id="upload-secondary-1" class="min-w-[120px] h-[120px] md:h-auto md:flex-1 border-2 border-dashed border-line rounded-xl flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer shrink-0">
+                   <iconify-icon icon="lucide:plus" class="text-2xl text-muted mb-1"></iconify-icon>
+                   <p class="text-sm text-muted font-medium">Arka detay</p>
+                 </button>
+                 <button id="upload-secondary-2" class="min-w-[120px] h-[120px] md:h-auto md:flex-1 border-2 border-dashed border-line rounded-xl flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer shrink-0">
+                   <iconify-icon icon="lucide:plus" class="text-2xl text-muted mb-1"></iconify-icon>
+                   <p class="text-sm text-muted font-medium">Yakından</p>
+                 </button>
+               </div>
+             </div>
+          </section>
+
+          <!-- Fiyat ve stok -->
+          <section class="bg-white rounded-2xl border border-line p-6 md:p-8 shadow-sm">
+             <h2 class="text-xl font-bold text-navy mb-6 border-b border-line pb-4">Fiyat ve stok</h2>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div>
+                 <label for="product-price" class="block text-base font-bold text-navy mb-2">Fiyat (₺) <span class="text-red-500">*</span></label>
+                 <input type="number" id="product-price" placeholder="Örn: 649" class="w-full px-4 py-3 min-h-[44px] bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors">
+               </div>
+               <div>
+                 <label for="product-stock" class="block text-base font-bold text-navy mb-2">Başlangıç Stoku</label>
+                 <input type="number" id="product-stock" placeholder="20" class="w-full px-4 py-3 min-h-[44px] bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors">
+               </div>
+             </div>
+          </section>
+
+          <!-- Seçenekler -->
+          <section class="bg-white rounded-2xl border border-line p-6 md:p-8 shadow-sm">
+             <h2 class="text-xl font-bold text-navy mb-6 border-b border-line pb-4">Seçenekler</h2>
+             <div class="mb-8">
+               <label for="color-input" class="block text-base font-bold text-navy mb-2">Renk adı</label>
+               <div class="relative">
+                 <input type="text" id="color-input" placeholder="Renk yazın: kır, ma, sa…" class="w-full px-4 py-3 min-h-[44px] bg-paper border border-line rounded-xl text-navy text-base focus:outline-none focus:border-purple focus:bg-white transition-colors" role="combobox" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="color-suggestions">
+
+                 <!-- Dropdown (Simulated active state) -->
+                 <ul id="color-suggestions" hidden class="absolute z-10 w-full mt-2 bg-white border border-line rounded-xl shadow-[0_10px_40px_rgba(17,24,39,0.08)] max-h-60 overflow-auto" role="listbox">
+                   <li class="px-4 py-3 hover:bg-purple/5 cursor-pointer flex items-center gap-3 border-b border-line last:border-b-0 transition-colors" role="option" aria-selected="true">
+                     <span class="w-5 h-5 rounded-full bg-[#DC2626] border border-gray-200"></span>
+                     <span class="text-base text-navy font-bold">Kırmızı</span>
+                   </li>
+                   <li class="px-4 py-3 hover:bg-purple/5 cursor-pointer flex items-center gap-3 border-b border-line last:border-b-0 transition-colors" role="option">
+                     <span class="w-5 h-5 rounded-full bg-[#2563EB] border border-gray-200"></span>
+                     <span class="text-base text-navy font-medium">Mavi</span>
+                   </li>
+                   <li class="px-4 py-3 hover:bg-purple/5 cursor-pointer flex items-center gap-3 border-b border-line last:border-b-0 transition-colors" role="option">
+                     <span class="w-5 h-5 rounded-full bg-[#EAB308] border border-gray-200"></span>
+                     <span class="text-base text-navy font-medium">Sarı</span>
+                   </li>
+                 </ul>
+               </div>
+               <p class="text-base text-muted mt-3">Yazdığınız harflerle başlayan renkler burada görünür.</p>
+
+               <div id="selected-color" hidden class="mt-5 p-3 bg-paper border border-line rounded-xl text-base" aria-live="polite">
+                 <div class="flex items-center justify-between gap-3">
+                   <div class="flex items-center gap-3"><span id="selected-color-swatch" class="w-8 h-8 rounded-full border border-line" aria-hidden="true"></span><span><span class="block text-muted">Seçilen renk</span><strong id="selected-color-name"></strong></span></div>
+                   <button id="clear-selected-color" type="button" class="min-h-[44px] px-3 font-bold text-purple">Kaldır</button>
+                 </div>
+                 <p class="mt-2 text-muted">Ekrandaki renk örneği yaklaşık tonu gösterir.</p>
+               </div>
+             </div>
+             <section id="size-stock-section" hidden class="border-t border-line pt-6">
+               <div class="flex items-start justify-between gap-4 mb-4"><div><h3 class="text-lg font-bold text-navy">Beden ve stok</h3><p class="text-base text-muted mt-1"><strong id="stock-color-name"></strong> rengi için her bedene ayrı stok girin.</p></div><span id="stock-color-swatch" class="w-8 h-8 rounded-full border border-line shrink-0" aria-hidden="true"></span></div>
+               <div class="overflow-hidden border border-line rounded-xl">
+                 <table class="w-full text-left"><thead class="bg-paper"><tr><th class="p-3 text-base font-bold">Beden</th><th class="p-3 text-base font-bold">Stok adedi</th><th class="p-3 text-base font-bold">Durum</th></tr></thead><tbody class="divide-y divide-line">
+                   <tr><td class="p-3 font-bold text-base">S</td><td class="p-3"><input id="stock-s" type="number" min="0" max="999" value="0" class="w-28 min-h-[44px] px-3 border border-line rounded-lg text-base" aria-label="S beden stok adedi"></td><td class="p-3 text-base text-muted">Tükendi</td></tr>
+                   <tr><td class="p-3 font-bold text-base">M</td><td class="p-3"><input id="stock-m" type="number" min="0" max="999" value="0" class="w-28 min-h-[44px] px-3 border border-line rounded-lg text-base" aria-label="M beden stok adedi"></td><td class="p-3 text-base text-muted">Tükendi</td></tr>
+                   <tr><td class="p-3 font-bold text-base">L</td><td class="p-3"><input id="stock-l" type="number" min="0" max="999" value="0" class="w-28 min-h-[44px] px-3 border border-line rounded-lg text-base" aria-label="L beden stok adedi"></td><td class="p-3 text-base text-muted">Tükendi</td></tr>
+                   <tr><td class="p-3 font-bold text-base">XL</td><td class="p-3"><input id="stock-xl" type="number" min="0" max="999" value="0" class="w-28 min-h-[44px] px-3 border border-line rounded-lg text-base" aria-label="XL beden stok adedi"></td><td class="p-3 text-base text-muted">Tükendi</td></tr>
+                   <tr><td class="p-3 font-bold text-base">XXL</td><td class="p-3"><input id="stock-xxl" type="number" min="0" max="999" value="0" class="w-28 min-h-[44px] px-3 border border-line rounded-lg text-base" aria-label="XXL beden stok adedi"></td><td class="p-3 text-base text-muted">Tükendi</td></tr>
+                 </tbody></table>
+               </div>
+               <p class="mt-3 text-base text-muted">Stok 0 ise o beden mağazada “Tükendi” görünür ve sepete eklenemez.</p>
+             </section>
+             <p id="size-stock-empty" class="p-4 bg-paper border border-line rounded-xl text-base text-muted">Beden stoklarını girmek için önce bir renk seçin.</p>
+          </section>
+
+          <!-- Mağazada göster -->
+          <section class="bg-white rounded-2xl border border-line p-6 md:p-8 shadow-sm">
+             <div class="flex items-start gap-4">
+               <div class="pt-1">
+                 <label class="relative inline-flex items-center cursor-pointer min-h-[24px]">
+                   <input type="checkbox" id="visibility-toggle" class="sr-only peer" checked>
+                   <div class="w-12 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple"></div>
+                 </label>
+               </div>
+               <div>
+                 <label for="visibility-toggle" class="text-lg font-bold text-navy cursor-pointer block">Mağazada görünürlük</label>
+                 <p class="text-base text-muted mt-1">Bu ayar açık olduğunda, ürün koleksiyon sayfalarında listelenir ve müşteriler tarafından satın alınabilir.</p>
+               </div>
+             </div>
+          </section>
+
+        </div>
+
+        <!-- Sticky Preview & Actions -->
+        <aside class="w-full lg:w-[360px] flex flex-col gap-6 lg:sticky lg:top-24 h-max">
+
+          <!-- Live Preview Card -->
+          <div class="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
+            <div class="bg-gray-50 border-b border-line p-4 flex justify-between items-center">
+              <span class="text-base font-bold text-muted uppercase tracking-wider">Canlı Önizleme</span>
+              <span class="bg-amber-100 text-amber-800 text-base font-bold px-3 py-1 rounded-lg">Taslak</span>
+            </div>
+            <div class="p-5">
+              <div class="aspect-[4/5] bg-paper border border-line rounded-xl mb-5 flex items-center justify-center overflow-hidden">
+                 <iconify-icon icon="lucide:shirt" class="text-6xl text-muted opacity-20"></iconify-icon>
+              </div>
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-extrabold text-navy text-xl leading-tight">Gece Yörüngesi</h3>
+                  <p class="text-base text-muted mt-1">Tişört (Oversize)</p>
+                </div>
+                <span class="font-bold text-navy text-xl">0 ₺</span>
+              </div>
+            </div>
+
+            <!-- Checklist -->
+            <div class="bg-gray-50 p-5 border-t border-line">
+              <h4 class="font-bold text-navy text-base mb-4">Yayınlama Durumu</h4>
+              <ul class="space-y-4">
+                <li class="flex items-start gap-3 text-green-700 font-medium text-base">
+                  <iconify-icon icon="lucide:check-circle-2" class="text-2xl shrink-0 mt-0.5"></iconify-icon>
+                  <span>Temel bilgiler girildi</span>
+                </li>
+                <li class="flex items-start gap-3 text-red-600 font-medium text-base">
+                  <iconify-icon icon="lucide:alert-circle" class="text-2xl shrink-0 mt-0.5"></iconify-icon>
+                  <span>Ana ürün görseli yüklenmedi</span>
+                </li>
+                <li class="flex items-start gap-3 text-red-600 font-medium text-base">
+                  <iconify-icon icon="lucide:alert-circle" class="text-2xl shrink-0 mt-0.5"></iconify-icon>
+                  <span>Fiyat girilmedi (Örn: 649)</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="space-y-3">
+            <div class="relative group">
+              <button id="btn-publish" class="w-full py-4 min-h-[56px] bg-navy text-white font-bold text-base rounded-xl flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                <iconify-icon icon="lucide:check" class="text-xl"></iconify-icon> Mağazada Yayınla
+              </button>
+              <p class="text-sm text-red-600 font-medium mt-2 text-center">Yayınlamak için eksik bilgileri tamamla</p>
+            </div>
+            <button id="btn-draft" class="w-full py-4 min-h-[56px] bg-white border border-line text-navy font-bold text-base rounded-xl hover:bg-gray-50 transition-colors">
+              Taslak Kaydet
+            </button>
+            <a href="#products" id="btn-cancel" class="block w-full py-4 min-h-[56px] text-center text-muted font-bold text-base hover:text-navy transition-colors">
+              İptal et ve geri dön
+            </a>
+          </div>
+
+        </aside>
+
+      </div>
+    </main>
+  </div>
+<script>
+(() => {
+  const colorInput = document.getElementById('color-input');
+  const suggestions = document.getElementById('color-suggestions');
+  const colorSuggestions = [
+    ['Kırmızı', '#DC2626'], ['Kiremit', '#B45309'], ['Mavi', '#2563EB'], ['Mor', '#7C3AED'],
+    ['Sarı', '#EAB308'], ['Siyah', '#111827'], ['Beyaz', '#F8FAFC'], ['Bej', '#D7C6AD'],
+    ['Bordo', '#800000'], ['Turuncu', '#EA580C'], ['Yeşil', '#16A34A'], ['Pembe', '#DB2777'],
+    ['Gri', '#6B7280'], ['Lacivert', '#1E3A8A'], ['Kahverengi', '#92400E'], ['Turkuaz', '#0D9488'],
+    ['Sedef', '#E5E7EB'], ['Safran', '#D97706'], ['Saks mavisi', '#2563EB'],
+    ['Haki', '#6B7045'], ['Antrasit', '#383E42'], ['Ekru', '#F3EBD3'], ['Krem', '#FFFDD0'],
+    ['Taş', '#C4BBAF'], ['Vizon', '#A38B79'], ['Camel', '#C19A6B'], ['Taba', '#A66A42'],
+    ['Kum', '#C2B280'], ['Karamel', '#AF6F3E'], ['Kahve', '#6F4E37'], ['Çikolata', '#5C3317'],
+    ['Füme', '#55565B'], ['Gümüş', '#C0C0C0'], ['Gri melanj', '#999B9E'], ['Açık gri', '#D3D3D3'],
+    ['Koyu gri', '#555555'], ['Açık mavi', '#ADD8E6'], ['Koyu mavi', '#00008B'], ['Buz mavisi', '#D6ECEF'],
+    ['Bebe mavisi', '#89CFF0'], ['İndigo', '#4B0082'], ['Petrol mavisi', '#005F6B'], ['Gece mavisi', '#191970'],
+    ['Mint', '#98D8C8'], ['Su yeşili', '#A8D5BA'], ['Çağla', '#B6C687'], ['Zeytin yeşili', '#808000'],
+    ['Zümrüt yeşili', '#008A60'], ['Orman yeşili', '#228B22'], ['Asker yeşili', '#4B5320'],
+    ['Lila', '#C8A2C8'], ['Lavanta', '#B7A4D4'], ['Mürdüm', '#673147'], ['Patlıcan moru', '#4B3048'],
+    ['Pudra', '#E8C4C4'], ['Gül kurusu', '#B76E79'], ['Fuşya', '#D10073'], ['Somon', '#FA8072'],
+    ['Mercan', '#FF7F50'], ['Nar çiçeği', '#EF5343'], ['Vişne', '#8B1A3A'], ['Şarap', '#722F37'],
+    ['Hardal', '#D4A017'], ['Altın', '#D4AF37'], ['Limon sarısı', '#FFF44F'], ['Bal köpüğü', '#C9A66B'],
+    ['Bakır', '#B87333'], ['Bronz', '#CD7F32'], ['Tarçın', '#A0522D'], ['Terracotta', '#C66B4E']
+  ];
+  if (colorInput && suggestions) {
+    const selectedColor = document.getElementById('selected-color');
+    const selectedName = document.getElementById('selected-color-name');
+    const selectedSwatch = document.getElementById('selected-color-swatch');
+    const stockSection = document.getElementById('size-stock-section');
+    const stockEmpty = document.getElementById('size-stock-empty');
+    const stockColorName = document.getElementById('stock-color-name');
+    const stockColorSwatch = document.getElementById('stock-color-swatch');
+    const normalizeColor = (value) => value.trim().toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i');
+    const closeSuggestions = () => {
+      suggestions.hidden = true;
+      colorInput.setAttribute('aria-expanded', 'false');
+    };
+    const updateSuggestions = () => {
+      const query = normalizeColor(colorInput.value);
+      selectedColor.hidden = true;
+      suggestions.innerHTML = '';
+      const matches = query
+        ? colorSuggestions.filter(([name]) => normalizeColor(name).startsWith(query))
+        : [];
+      matches.forEach(([name, hex], index) => {
+        const item = document.createElement('li');
+        item.className = 'px-4 py-3 hover:bg-purple/5 cursor-pointer flex items-center gap-3 border-b border-line last:border-b-0 transition-colors';
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+        item.innerHTML = `<span class="w-5 h-5 rounded-full border border-gray-200" style="background:${hex}"></span><span class="text-base text-navy font-medium"></span>`;
+        item.querySelector('span:last-child').textContent = name;
+        item.addEventListener('click', () => {
+          colorInput.value = name;
+          selectedName.textContent = name;
+          selectedSwatch.style.backgroundColor = hex;
+          selectedColor.hidden = false;
+          stockColorName.textContent = name;
+          stockColorSwatch.style.backgroundColor = hex;
+          stockSection.hidden = false;
+          stockEmpty.hidden = true;
+          closeSuggestions();
+        });
+        suggestions.appendChild(item);
+      });
+      suggestions.hidden = matches.length === 0;
+      colorInput.setAttribute('aria-expanded', String(matches.length > 0));
+    };
+    colorInput.addEventListener('input', updateSuggestions);
+    document.getElementById('clear-selected-color').addEventListener('click', () => {
+      colorInput.value = '';
+      selectedColor.hidden = true;
+      selectedName.textContent = '';
+      stockSection.hidden = true;
+      stockEmpty.hidden = false;
+      closeSuggestions();
+      colorInput.focus();
+    });
+    stockSection.querySelectorAll('input[type="number"]').forEach((input) => input.addEventListener('input', () => {
+      const status = input.closest('tr').querySelector('td:last-child');
+      const stock = Math.max(0, Number(input.value) || 0);
+      status.textContent = stock ? `${stock} adet hazır` : 'Tükendi';
+      status.className = stock ? 'p-3 text-base text-green-700 font-bold' : 'p-3 text-base text-muted';
+    }));
+    colorInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' || event.key === 'Tab') closeSuggestions();
+    });
+    document.addEventListener('click', (event) => {
+      if (event.target !== colorInput && !suggestions.contains(event.target)) closeSuggestions();
+    });
+    closeSuggestions();
+  }
+  document.getElementById('remove-color-btn')?.addEventListener('click', (event) => event.currentTarget.closest('div.flex.items-center.justify-between')?.remove());
+
+  const addCategory = document.getElementById('add-category-btn');
+  const categoryForm = document.getElementById('new-category-form');
+  const categorySelect = document.getElementById('product-category');
+  if (addCategory && categoryForm && categorySelect) {
+    const categoryInput = categoryForm.querySelector('input');
+    const categoryButtons = categoryForm.querySelectorAll('button');
+    addCategory.addEventListener('click', () => { categoryForm.classList.remove('hidden'); categoryInput?.focus(); });
+    categoryButtons[1]?.addEventListener('click', () => { categoryForm.classList.add('hidden'); if (categoryInput) categoryInput.value = ''; });
+    categoryButtons[0]?.addEventListener('click', () => { const name = categoryInput?.value.trim(); if (!name) return; categorySelect.add(new Option(name, name)); categorySelect.value = name; categoryForm.classList.add('hidden'); if (categoryInput) categoryInput.value = ''; });
+  }
+})();
+</script>
+</body>
+</html>

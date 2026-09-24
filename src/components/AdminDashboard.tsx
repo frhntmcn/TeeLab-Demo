@@ -9,8 +9,10 @@ import { brand } from '../config/brand';
 import { products } from '../data/products';
 import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
 import { type AdminOrder, type AdminOrderStatus, ORDER_INBOX_EVENT, readDemoOrders, readOrderStatusOverrides, updateDemoOrderStatus } from '../lib/orderInbox';
+import { getWooCommerceAdminOrders, updateWooCommerceAdminOrderStatus } from '../lib/adminCommerce';
 import { formatTRY } from '../lib/pricing';
 import { createManagedProduct, filterManagedProducts, getManagedProductRecords, STOREFRONT_MANAGEMENT_EVENT, updateManagedProduct } from '../lib/storefrontManagement';
+import { requiresLiveAdminAuthentication } from '../lib/adminSession';
 import { Logo } from './Logo';
 import { ProductEditor } from './ProductEditor';
 
@@ -73,9 +75,10 @@ function isToday(value: string) {
   return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
 }
 
-const statusTone = (status: AdminOrderStatus) => status === 'Yeni sipariş' ? 'new' : status === 'Üretime hazır' ? 'ready' : status === 'Baskıda' ? 'printing' : 'shipped';
+const statusTone = (status: AdminOrderStatus) => status === 'Yeni sipariş' ? 'new' : ['Ödeme başarısız', 'İptal edildi', 'İade edildi'].includes(status) ? 'cancelled' : status === 'Üretime hazır' ? 'ready' : status === 'Baskıda' ? 'printing' : 'shipped';
 
 export function AdminDashboard() {
+  const liveStore = requiresLiveAdminAuthentication();
   const [activeSection, setActiveSection] = useState<AdminSection>('home');
   const [theme, setTheme] = useState<AdminTheme>(() => {
     const savedTheme = window.localStorage.getItem(`${brand.storageNamespace}:admin-theme`);
@@ -86,7 +89,8 @@ export function AdminDashboard() {
   const [completedTasks, setCompletedTasks] = useState<string[]>(readCompletedTasks);
   const [notice, setNotice] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [orders, setOrders] = useState<AdminOrder[]>(readAllOrders);
+  const [orders, setOrders] = useState<AdminOrder[]>(() => liveStore ? [] : readAllOrders());
+  const [ordersLoading, setOrdersLoading] = useState(liveStore);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [managedProducts, setManagedProducts] = useState(() => getManagedProductRecords(products));
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>(() => Object.fromEntries(getManagedProductRecords(products).map((item) => [item.product.id, String(item.stock)])));
@@ -99,7 +103,15 @@ export function AdminDashboard() {
   useEffect(() => { window.localStorage.setItem(COMPLETED_TASKS_KEY, JSON.stringify(completedTasks)); }, [completedTasks]);
   useEffect(() => { window.localStorage.setItem(PRODUCT_CATEGORIES_KEY, JSON.stringify(productCategories)); }, [productCategories]);
   useEffect(() => {
-    const refreshOrders = () => setOrders(readAllOrders());
+    let cancelled = false;
+    const refreshOrders = () => {
+      if (liveStore) {
+        setOrdersLoading(true);
+        getWooCommerceAdminOrders().then((next) => { if (!cancelled) setOrders(next); }).catch((error: unknown) => {
+          if (!cancelled) setNotice(error instanceof Error ? error.message : 'Gerçek siparişler alınamadı.');
+        }).finally(() => { if (!cancelled) setOrdersLoading(false); });
+      } else setOrders(readAllOrders());
+    };
     const refreshProducts = () => {
       const next = getManagedProductRecords(products);
       setManagedProducts(next);
@@ -108,12 +120,14 @@ export function AdminDashboard() {
     window.addEventListener('storage', refreshOrders);
     window.addEventListener(ORDER_INBOX_EVENT, refreshOrders);
     window.addEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProducts);
+    if (liveStore) refreshOrders();
     return () => {
+      cancelled = true;
       window.removeEventListener('storage', refreshOrders);
       window.removeEventListener(ORDER_INBOX_EVENT, refreshOrders);
       window.removeEventListener(STOREFRONT_MANAGEMENT_EVENT, refreshProducts);
     };
-  }, []);
+  }, [liveStore]);
 
   const visibleOrders = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('tr-TR');
@@ -123,12 +137,16 @@ export function AdminDashboard() {
   const visibleManagedProducts = useMemo(() => filterManagedProducts(managedProducts, query), [managedProducts, query]);
   const pendingTasks = tasks.filter((task) => !completedTasks.includes(task.id));
   const newOrderCount = orders.filter((order) => order.status === 'Yeni sipariş').length;
-  const dailySales = orders.filter((order) => isToday(order.createdAt)).reduce((total, order) => total + order.total, 0);
+  const dailySales = orders.filter((order) => isToday(order.createdAt) && (!liveStore || order.paid === true)).reduce((total, order) => total + order.total, 0);
 
   const closeOrderDialog = useCallback(() => setSelectedOrder(null), []);
   const closeProductDialog = useCallback(() => setProductFormOpen(false), []);
   const orderDialogRef = useAccessibleDialog<HTMLElement>(Boolean(selectedOrder), closeOrderDialog);
   const openProductEditor = () => {
+    if (liveStore) {
+      setNotice('Ürün düzenleme şu anda yalnızca yerel demoda çalışıyor; canlı mağazada yanlışlıkla yerel bir taslak oluşturmamak için kapalı.');
+      return;
+    }
     setProductFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
@@ -139,13 +157,26 @@ export function AdminDashboard() {
     setCompletedTasks((current) => [...current, id]);
     setNotice('İş tamamlandı olarak işaretlendi.');
   };
-  const changeOrderStatus = (order: AdminOrder, status: AdminOrderStatus) => {
+  const changeOrderStatus = async (order: AdminOrder, status: AdminOrderStatus) => {
+    if (liveStore) {
+      if (!order.remoteId) { setNotice('Siparişin WooCommerce kimliği bulunamadı; durum güncellenemedi.'); return; }
+      try {
+        const updated = await updateWooCommerceAdminOrderStatus(order.remoteId, status);
+        setOrders((current) => current.map((item) => item.remoteId === updated.remoteId ? updated : item));
+        setSelectedOrder(updated);
+        setNotice(`${order.id} durumu WooCommerce üzerinde “${status}” olarak güncellendi.`);
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Sipariş durumu güncellenemedi.');
+      }
+      return;
+    }
     updateDemoOrderStatus(order.id, status);
     setOrders((current) => current.map((item) => item.id === order.id ? { ...item, status } : item));
     setSelectedOrder((current) => current ? { ...current, status } : current);
     setNotice(`${order.id} durumu “${status}” olarak güncellendi.`);
   };
   const changeProduct = (id: string, update: { visible?: boolean; stock?: number }) => {
+    if (liveStore) { setNotice('Stok ve görünürlük WooCommerce’e bağlı değil; değişiklik yapılmadı.'); return; }
     updateManagedProduct(id, update);
     setManagedProducts(getManagedProductRecords(products));
     setNotice('Ürün ayarı mağazaya yansıtıldı.');
@@ -185,14 +216,14 @@ export function AdminDashboard() {
   const renderOrders = (compact = false) => (
     <section className="admin-card admin-orders" id="son-siparisler" aria-labelledby="orders-heading">
       <div className="admin-card-heading admin-orders-heading"><div><p className="admin-section-kicker">{compact ? 'SIRADA NE VAR?' : 'SİPARİŞ YÖNETİMİ'}</p><h2 id="orders-heading"><ListOrdered size={23} /> {compact ? 'Son siparişler' : 'Tüm siparişler'}</h2></div>{compact && <button type="button" onClick={() => goTo('orders')}>Tüm siparişleri gör</button>}</div>
-      <div className="admin-table-wrap"><table><thead><tr><th>Sipariş</th><th>Müşteri</th><th>Ürün</th><th>Durum</th><th><span className="sr-only">İşlem</span></th></tr></thead><tbody>{visibleOrders.slice(0, compact ? 4 : undefined).map((order) => <tr key={order.id}><td><strong>{order.id}</strong><small>{new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' }).format(new Date(order.createdAt))}</small></td><td><strong>{order.customer}</strong><small>{order.email}</small></td><td><strong>{order.product}</strong><small>{order.detail}</small></td><td><span className={`admin-status admin-status--${statusTone(order.status)}`}>{order.status}</span></td><td><button className="admin-action" type="button" onClick={() => setSelectedOrder(order)}>Siparişi aç</button></td></tr>)}</tbody></table>{!visibleOrders.length && <p className="admin-empty">Aramana uygun sipariş bulunamadı. Başka bir kelime deneyebilirsin.</p>}</div>
+      <div className="admin-table-wrap"><table><thead><tr><th>Sipariş</th><th>Müşteri</th><th>Ürün</th><th>Durum</th><th><span className="sr-only">İşlem</span></th></tr></thead><tbody>{visibleOrders.slice(0, compact ? 4 : undefined).map((order) => <tr key={order.id}><td><strong>{order.id}</strong><small>{new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' }).format(new Date(order.createdAt))}</small></td><td><strong>{order.customer}</strong><small>{order.email}</small></td><td><strong>{order.product}</strong><small>{order.detail}</small></td><td><span className={`admin-status admin-status--${statusTone(order.status)}`}>{order.status}</span></td><td><button className="admin-action" type="button" onClick={() => setSelectedOrder(order)}>Siparişi aç</button></td></tr>)}</tbody></table>{ordersLoading && <p className="admin-empty">WooCommerce siparişleri yükleniyor…</p>}{!ordersLoading && !visibleOrders.length && <p className="admin-empty">{liveStore ? 'WooCommerce üzerinde henüz sipariş yok.' : 'Aramana uygun sipariş bulunamadı. Başka bir kelime deneyebilirsin.'}</p>}</div>
     </section>
   );
 
   const renderProducts = () => (
     <section className="admin-section-page" aria-labelledby="products-title">
-      <div className="admin-page-heading"><div><p className="admin-section-kicker">MAĞAZA İLE BAĞLANTILI</p><h2 id="products-title">Ürünleri yönet</h2><p>Buradaki görünürlük ve stok değişiklikleri koleksiyon sayfasına anında yansır.</p></div><button id="admin-new-product-button" className="admin-action admin-action--primary" type="button" onClick={openProductEditor}><Plus size={18} /> Yeni ürün ekle</button></div>
-      <div className="admin-product-list">{visibleManagedProducts.map(({ product, visible, stock, custom }) => <article className="admin-product-row" key={product.id}><div><span className="admin-product-mark"><Shirt size={22} /></span><span><strong>{product.name}</strong><small>{custom ? 'Panelden eklendi' : 'Hazır koleksiyon'} · {stock === 0 ? 'Tükendi' : `${stock} stok`} · {formatTRY(product.price)}</small></span></div><label>Stok<input type="number" min="0" max="999" inputMode="numeric" value={stockDrafts[product.id] ?? String(stock)} onChange={(event) => setStockDrafts((current) => ({ ...current, [product.id]: event.target.value }))} onBlur={(event) => commitStock(product.id, stock, event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label><label className="admin-switch"><input type="checkbox" checked={visible} onChange={(event) => changeProduct(product.id, { visible: event.target.checked })} /><span aria-hidden="true" /><b>{visible ? 'Mağazada görünüyor' : 'Mağazada gizli'}</b></label><Link className="admin-action" to={`/koleksiyon/${product.id}`}>Ürünü gör <ArrowRight size={15} /></Link></article>)}</div>
+      <div className="admin-page-heading"><div><p className="admin-section-kicker">MAĞAZA İLE BAĞLANTILI</p><h2 id="products-title">Ürünleri yönet</h2><p>{liveStore ? 'Burada yalnızca önizleme görürsün; canlı ürün/stok değişikliği henüz WooCommerce’e yazılmıyor.' : 'Buradaki görünürlük ve stok değişiklikleri koleksiyon sayfasına anında yansır.'}</p></div><button id="admin-new-product-button" className="admin-action admin-action--primary" type="button" onClick={openProductEditor} disabled={liveStore} title={liveStore ? 'WooCommerce ürün kaydı bağlantısı tamamlanmadı' : undefined}><Plus size={18} /> Yeni ürün ekle</button></div>
+      <div className="admin-product-list">{visibleManagedProducts.map(({ product, visible, stock, custom }) => <article className="admin-product-row" key={product.id}><div><span className="admin-product-mark"><Shirt size={22} /></span><span><strong>{product.name}</strong><small>{custom ? 'Panelden eklendi' : 'Hazır koleksiyon'} · {stock === 0 ? 'Tükendi' : `${stock} stok`} · {formatTRY(product.price)}</small></span></div><label>Stok<input disabled={liveStore} type="number" min="0" max="999" inputMode="numeric" value={stockDrafts[product.id] ?? String(stock)} onChange={(event) => setStockDrafts((current) => ({ ...current, [product.id]: event.target.value }))} onBlur={(event) => commitStock(product.id, stock, event.currentTarget.value)} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label><label className="admin-switch"><input disabled={liveStore} type="checkbox" checked={visible} onChange={(event) => changeProduct(product.id, { visible: event.target.checked })} /><span aria-hidden="true" /><b>{visible ? 'Mağazada görünüyor' : 'Mağazada gizli'}</b></label><Link className="admin-action" to={`/koleksiyon/${product.id}`}>Ürünü gör <ArrowRight size={15} /></Link></article>)}</div>
       {!visibleManagedProducts.length && <p className="admin-empty admin-product-empty">Aramana uygun ürün bulunamadı. Ürün adı veya açıklamasından başka bir kelime deneyebilirsin.</p>}
     </section>
   );
@@ -215,8 +246,8 @@ export function AdminDashboard() {
     <div className="admin-shell" data-theme={theme}>
       <aside className="admin-sidebar" aria-label="Yönetim menüsü"><Link className="admin-brand" to="/yonetim" onClick={() => goTo('home')} aria-label={`${brand.name} yönetim ana sayfası`}><Logo inverse={theme === 'dark'} /></Link><nav className="admin-nav">{navigation.map(({ id, label, icon: Icon }) => <button className={activeSection === id ? 'active' : ''} type="button" key={id} aria-current={activeSection === id ? 'page' : undefined} onClick={() => goTo(id)}><Icon size={22} aria-hidden="true" /><span>{label}</span></button>)}</nav><div className="admin-profile"><span className="admin-avatar" aria-hidden="true">M</span><span><strong>Maymoon Ekibi</strong><small>Mağaza yöneticisi</small></span></div></aside>
       <main className="admin-main"><header className="admin-topbar"><div><p className="admin-eyebrow">{today}</p><h1>{activeSection === 'home' ? 'Günaydın.' : navigation.find((item) => item.id === activeSection)?.label}</h1><p>{activeSection === 'home' ? `Bugün ilgilenmen gereken ${pendingTasks.length} işin var.` : 'Değişiklikler bu tarayıcıda otomatik olarak saklanır.'}</p></div><div className={`admin-topbar-actions ${['designs', 'customers', 'settings'].includes(activeSection) ? 'admin-topbar-actions--without-search' : ''}`}>{!['designs', 'customers', 'settings'].includes(activeSection) && <label className="admin-search"><Search size={20} aria-hidden="true" /><span className="sr-only">{activeSection === 'products' ? 'Ürün ara' : 'Sipariş veya müşteri ara'}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={activeSection === 'products' ? 'Ürün adı veya açıklaması ara' : 'Sipariş, ürün veya müşteri ara'} /></label>}<button className="admin-icon-button" type="button" aria-label={theme === 'light' ? 'Koyu moda geç' : 'Açık moda geç'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={21} /> : <Sun size={21} />}</button><button className="admin-icon-button" type="button" aria-label="Bildirimleri aç" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}><Bell size={21} /><span aria-label={`${newOrderCount} yeni bildirim`} /></button></div>{notificationsOpen && <div className="admin-notifications" role="status"><strong>Bildirimler</strong><p>{newOrderCount ? `${newOrderCount} yeni sipariş mağazadan yönetim paneline ulaştı.` : 'Şu anda yeni bildirimin yok.'}</p><button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Bildirimleri kapat"><X size={17} /></button></div>}</header>
-        <div className="admin-content">{notice && <div className="admin-notice" role="status"><CheckCircle2 size={19} />{notice}<button type="button" aria-label="Bildirimi kapat" onClick={() => setNotice('')}><X size={17} /></button></div>}{productFormOpen ? <ProductEditor categories={productCategories} onAddCategory={addCategory} onClose={closeProductDialog} onSave={addProduct} /> : <>{activeSection === 'home' && renderHome()}{activeSection === 'orders' && renderOrders()}{activeSection === 'products' && renderProducts()}{['designs', 'customers', 'settings'].includes(activeSection) && renderSimpleSection()}</>}</div></main>
-      {selectedOrder && <div className="admin-modal-backdrop" role="presentation" onMouseDown={closeOrderDialog}><section ref={orderDialogRef} className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="order-dialog-title" tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}><button className="admin-modal-close" type="button" onClick={closeOrderDialog} aria-label="Siparişi kapat"><X /></button><p className="admin-section-kicker">SİPARİŞ DETAYI</p><h2 id="order-dialog-title">{selectedOrder.id}</h2><dl><div><dt>Müşteri</dt><dd>{selectedOrder.customer}</dd></div><div><dt>Ürün</dt><dd>{selectedOrder.product}</dd></div><div><dt>Toplam</dt><dd>{formatTRY(selectedOrder.total)}</dd></div></dl><label>Sipariş durumu<select value={selectedOrder.status} onChange={(event) => changeOrderStatus(selectedOrder, event.target.value as AdminOrderStatus)}>{(['Yeni sipariş', 'Üretime hazır', 'Baskıda', 'Kargoya verildi'] as AdminOrderStatus[]).map((status) => <option key={status}>{status}</option>)}</select></label><button className="admin-action admin-action--primary" type="button" onClick={closeOrderDialog}>Kaydet ve kapat</button></section></div>}
+        <div className="admin-content">{liveStore && <div className="admin-live-warning" role="status"><strong>Canlı bağlantı:</strong> Siparişler WooCommerce’den yüklenir ve durum değişiklikleri oraya kaydedilir. Ürün/stok düzenleme ve tasarım yönetimi bu panelde henüz WooCommerce’e bağlı değildir.</div>}{notice && <div className="admin-notice" role="status"><CheckCircle2 size={19} />{notice}<button type="button" aria-label="Bildirimi kapat" onClick={() => setNotice('')}><X size={17} /></button></div>}{productFormOpen ? <ProductEditor categories={productCategories} onAddCategory={addCategory} onClose={closeProductDialog} onSave={addProduct} /> : <>{activeSection === 'home' && renderHome()}{activeSection === 'orders' && renderOrders()}{activeSection === 'products' && renderProducts()}{['designs', 'customers', 'settings'].includes(activeSection) && renderSimpleSection()}</>}</div></main>
+      {selectedOrder && <div className="admin-modal-backdrop" role="presentation" onMouseDown={closeOrderDialog}><section ref={orderDialogRef} className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="order-dialog-title" tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}><button className="admin-modal-close" type="button" onClick={closeOrderDialog} aria-label="Siparişi kapat"><X /></button><p className="admin-section-kicker">SİPARİŞ DETAYI</p><h2 id="order-dialog-title">{selectedOrder.id}</h2><dl><div><dt>Müşteri</dt><dd>{selectedOrder.customer}</dd></div><div><dt>Ürün</dt><dd>{selectedOrder.product}</dd></div><div><dt>Toplam</dt><dd>{formatTRY(selectedOrder.total)}</dd></div></dl><label>Sipariş durumu<select value={selectedOrder.status} onChange={(event) => changeOrderStatus(selectedOrder, event.target.value as AdminOrderStatus)}>{(['Yeni sipariş', 'Ödeme başarısız', 'Üretime hazır', 'Baskıda', 'Kargoya verildi', 'Tamamlandı', 'İptal edildi', 'İade edildi'] as AdminOrderStatus[]).map((status) => <option key={status}>{status}</option>)}</select></label><button className="admin-action admin-action--primary" type="button" onClick={closeOrderDialog}>Kaydet ve kapat</button></section></div>}
     </div>
   );
 }

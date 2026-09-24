@@ -8,7 +8,7 @@ const STORAGE_KEY = `${brand.storageNamespace}.demo.draft.v1`;
 export const createEmptyDraft = (): SavedDraft => ({
   schemaVersion: 2,
   documents: { front: emptyDesign(), back: emptyDesign() },
-  options: { color: 'white', size: 'M', fit: 'slim', quantity: 1 },
+  options: { color: 'white', size: 'M', fit: 'slim', quantity: 1, sizeQuantities: { M: 1 } },
   activeSide: 'front',
   previews: { front: '', back: '' },
   updatedAt: new Date().toISOString(),

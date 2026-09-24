@@ -40,11 +40,11 @@ export function serializeCart(items: CartItem[]): string {
 }
 
 export function cartSubtotal(items: CartItem[]): number {
-  return items.reduce((total, item) => total + cartLineTotal(item), 0);
+  return items.reduce((total, item) => total + cartLineTotal(item, items), 0);
 }
 
 export function mergeCartItem(current: CartItem[], next: CartItem): CartItem[] {
-  const match = current.find((item) => cartMergeKey(item) === cartMergeKey(next));
+  const match = current.find((item) => item.designGroupId === next.designGroupId && cartMergeKey(item) === cartMergeKey(next));
   if (!match) return [...current, { ...next, quantity: clampOrderQuantity(next.quantity) }];
   return current.map((item) => item.id === match.id ? { ...item, quantity: clampOrderQuantity(item.quantity + next.quantity) } : item);
 }
@@ -52,5 +52,7 @@ export function mergeCartItem(current: CartItem[], next: CartItem): CartItem[] {
 export function updateCartQuantity(items: CartItem[], id: string, quantity: number): CartItem[] {
   const safeQuantity = Math.floor(quantity);
   if (safeQuantity <= 0) return items.filter((item) => item.id !== id);
-  return items.map((item) => item.id === id ? { ...item, quantity: clampOrderQuantity(safeQuantity) } : item);
+  const target = items.find((item) => item.id === id);
+  const groupOtherQuantity = target?.designGroupId ? items.reduce((sum, item) => sum + (item.designGroupId === target.designGroupId && item.id !== id ? item.quantity : 0), 0) : 0;
+  return items.map((item) => item.id === id ? { ...item, quantity: Math.min(clampOrderQuantity(safeQuantity), MAX_CART_QUANTITY - groupOtherQuantity) } : item);
 }

@@ -27,6 +27,9 @@ export interface CartItem {
   artwork: Product['artwork'];
   designPreview?: string;
   isCustom?: boolean;
+  productionSnapshot?: ProductionSnapshot;
+  /** Lines from one Studio design share quantity discount across sizes. */
+  designGroupId?: string;
 }
 
 export interface DesignDocument {
@@ -68,11 +71,22 @@ export interface ObjectMeasurement {
   quality?: 'suitable' | 'warning' | 'risk';
 }
 
+/** Immutable design data kept with a cart line until the server persists it. */
+export interface ProductionSnapshot {
+  schemaVersion: 1;
+  lockedAt: string;
+  documents: DesignSides;
+  measurements: Record<Side, ObjectMeasurement[]>;
+  templateMetadata?: Partial<Record<Side, TemplateMetadata>>;
+}
+
 export interface OrderOptions {
   color: ShirtColor;
   size: ShirtSize;
   fit: ShirtFit;
   quantity: number;
+  /** Studio multi-size selection; absent in older saved drafts. */
+  sizeQuantities?: Partial<Record<ShirtSize, number>>;
 }
 
 export interface PriceBreakdown {

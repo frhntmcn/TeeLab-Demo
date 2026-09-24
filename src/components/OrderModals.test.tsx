@@ -6,6 +6,7 @@ const props = {
   options: { color: 'white' as const, size: 'M' as const, fit: 'slim' as const, quantity: 1 },
   price: { baseUnit: 100, frontUnit: 0, backUnit: 0, subtotal: 100, discount: 0, total: 100 },
   previews: { front: '', back: '' },
+  documents: { front: { version: '6.0.0', objects: [] }, back: { version: '6.0.0', objects: [] } },
   measurements: [],
   orderId: 'TL-1000',
   onClose: vi.fn(),

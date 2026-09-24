@@ -1,4 +1,4 @@
-import { Menu, ShoppingBag, X } from 'lucide-react';
+import { Menu, ShoppingBag, UserRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { brand } from '../config/brand';
@@ -35,8 +35,10 @@ export function Header({ cartCount }: { cartCount: number }) {
         <NavLink to="/" end>Ana Sayfa</NavLink>
         <Link className={collectionActive ? 'active' : undefined} to="/#koleksiyon">Koleksiyon</Link>
         <NavLink className="nav-studio-link" to="/studio">Kendin Tasarla</NavLink>
+        <NavLink to="/kurumsal">Kurumsal</NavLink>
       </nav>
       <div className="header-actions">
+        <Link className="account-button" to="/hesabim" aria-label="Hesabım"><UserRound size={19} /></Link>
         <Link className="cart-button" to="/sepet" aria-label={cartCount ? `Sepet, ${cartCount} ürün` : 'Sepet, boş'}>
         <ShoppingBag size={20} /><span>{cartCount}</span>
         </Link>
@@ -50,6 +52,9 @@ export function Header({ cartCount }: { cartCount: number }) {
           <NavLink to="/" end onClick={closeMenu}>Ana Sayfa</NavLink>
           <Link to="/#koleksiyon" onClick={closeMenu}>Koleksiyon</Link>
           <NavLink className="button button--ink mobile-studio-link" to="/studio" onClick={closeMenu}>Kendin Tasarla</NavLink>
+          <Link to="/kurumsal" onClick={closeMenu}>Kurumsal ve toplu sipariş</Link>
+          <Link to="/sss" onClick={closeMenu}>Sık sorulan sorular</Link>
+          <Link to="/hesabim" onClick={closeMenu}>Hesabım</Link>
           <Link to="/sepet" onClick={closeMenu}>Sepet{cartCount ? ` (${cartCount})` : ''}</Link>
         </nav>
       </>}

@@ -17,7 +17,21 @@ export function calculatePrice(quantity: number, hasFront: boolean, hasBack: boo
   return { baseUnit, frontUnit, backUnit, subtotal, discount, total: subtotal - discount };
 }
 
-export function cartLineTotal(item: Pick<CartItem, 'unitPrice' | 'quantity' | 'printSides'>): number {
+export function cartLineTotal(item: Pick<CartItem, 'unitPrice' | 'quantity' | 'printSides' | 'designGroupId'>, allItems?: CartItem[]): number {
+  if (item.designGroupId && allItems) {
+    const group = allItems.filter((line) => line.designGroupId === item.designGroupId);
+    const groupQuantity = group.reduce((sum, line) => sum + line.quantity, 0);
+    const subtotal = group.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+    const rate = pricingConfig.quantityDiscounts.find((discount) => groupQuantity >= discount.minimumQuantity)?.rate ?? 0;
+    const discount = Math.round(subtotal * rate);
+    const index = group.findIndex((line) => line === item);
+    if (index >= 0 && subtotal > 0) {
+      const allocated = index === group.length - 1
+        ? discount - group.slice(0, -1).reduce((sum, line) => sum + Math.floor(discount * line.unitPrice * line.quantity / subtotal), 0)
+        : Math.floor(discount * item.unitPrice * item.quantity / subtotal);
+      return item.unitPrice * item.quantity - allocated;
+    }
+  }
   return item.printSides
     ? calculatePrice(item.quantity, item.printSides.front, item.printSides.back).total
     : item.unitPrice * item.quantity;

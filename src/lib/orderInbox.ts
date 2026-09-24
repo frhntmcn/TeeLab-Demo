@@ -8,10 +8,11 @@ export const ORDER_INBOX_EVENT = `${brand.storageNamespace}:order-inbox-change`;
 const STORAGE_KEY = `${brand.storageNamespace}:demo-orders:v1`;
 const STATUS_STORAGE_KEY = `${brand.storageNamespace}:sample-order-statuses:v1`;
 
-export type AdminOrderStatus = 'Yeni sipariş' | 'Üretime hazır' | 'Baskıda' | 'Kargoya verildi';
+export type AdminOrderStatus = 'Yeni sipariş' | 'Ödeme başarısız' | 'Üretime hazır' | 'Baskıda' | 'Kargoya verildi' | 'Tamamlandı' | 'İptal edildi' | 'İade edildi';
 
 export interface AdminOrder {
   id: string;
+  remoteId?: number;
   customer: string;
   email: string;
   product: string;
@@ -19,9 +20,10 @@ export interface AdminOrder {
   total: number;
   status: AdminOrderStatus;
   createdAt: string;
+  paid?: boolean;
 }
 
-const orderStatuses: AdminOrderStatus[] = ['Yeni sipariş', 'Üretime hazır', 'Baskıda', 'Kargoya verildi'];
+const orderStatuses: AdminOrderStatus[] = ['Yeni sipariş', 'Ödeme başarısız', 'Üretime hazır', 'Baskıda', 'Kargoya verildi', 'Tamamlandı', 'İptal edildi', 'İade edildi'];
 
 function isOrderStatus(value: unknown): value is AdminOrderStatus {
   return typeof value === 'string' && orderStatuses.includes(value as AdminOrderStatus);

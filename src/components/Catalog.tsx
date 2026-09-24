@@ -1,10 +1,11 @@
-import { ArrowLeft, ArrowRight, Check, Pause, Play, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, Pause, Play, Search, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { brand } from '../config/brand';
 import { colorHex, colorNames, products } from '../data/products';
 import { formatTRY } from '../lib/pricing';
 import { getManagedProductRecords, STOREFRONT_MANAGEMENT_EVENT } from '../lib/storefrontManagement';
-import { fetchWooCommerceProductOverrides } from '../lib/woocommerce';
+import { fetchWooCommerceProductOverrides, getWooCommerceProductOverride } from '../lib/woocommerce';
+import { filterAndSortCatalog, type CatalogSort } from '../lib/catalog';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
 
@@ -17,13 +18,16 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [visibleProducts, setVisibleProducts] = useState(() => getManagedProductRecords(products).filter((item) => item.visible));
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [catalogSort, setCatalogSort] = useState<CatalogSort>('featured');
+  const filteredProducts = useMemo(() => filterAndSortCatalog(visibleProducts, catalogQuery, catalogSort), [visibleProducts, catalogQuery, catalogSort]);
 
   useEffect(() => {
     let cancelled = false;
     fetchWooCommerceProductOverrides().then((overrides) => {
       if (cancelled || !Object.keys(overrides).length) return;
       setVisibleProducts(getManagedProductRecords(products).filter((item) => item.visible).map((item) => {
-        const override = overrides[item.product.id];
+        const override = getWooCommerceProductOverride(overrides, item.product.id);
         return override ? { ...item, stock: override.stock, product: { ...item.product, price: override.price } } : item;
       }));
     });
@@ -100,8 +104,9 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           <div><span className="editorial-index">HAZIR KOLEKSİYON</span><h2>Dört fikir.<br />İki yüz.</h2></div>
           <p>Her parça ön ve arka yüzüyle birlikte düşünülür. Baskı dokusu, kumaş ve renk tek bir kompozisyonda buluşur.</p>
         </header>
+        <div className="catalog-controls"><label><Search size={18} aria-hidden="true" /><span className="sr-only">Ürün ara</span><input value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder="Ürün adı veya açıklama ara" /></label><label><span>Sırala</span><select value={catalogSort} onChange={(event) => setCatalogSort(event.target.value as CatalogSort)}><option value="featured">Öne çıkanlar</option><option value="price-ascending">Fiyat: düşükten yükseğe</option><option value="price-descending">Fiyat: yüksekten düşüğe</option></select></label><p role="status">{filteredProducts.length} ürün</p></div>
         <div className="editorial-product-grid">
-          {visibleProducts.map(({ product, stock }, index) => (
+          {filteredProducts.map(({ product, stock }, index) => (
             <article className="editorial-product" key={product.id}>
               <button className="editorial-product__visual" onClick={() => onProduct(product)} aria-label={`${product.name} ürününü incele`}>
                 <span className="editorial-product__number">0{index + 1}</span>
@@ -120,6 +125,7 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
             </article>
           ))}
         </div>
+        {!filteredProducts.length && <p className="catalog-empty">Aramana uygun ürün bulamadık. Başka bir ürün adı deneyebilirsin.</p>}
       </section>
 
       <section className="editorial-studio-cta">

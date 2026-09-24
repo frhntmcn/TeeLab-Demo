@@ -33,3 +33,19 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  verify-wordpress-plugin:
+    name: Validate WordPress plugin PHP syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+
+      - name: Lint commerce bridge
+        run: php -l wordpress-plugin/maymoon-commerce-bridge.php

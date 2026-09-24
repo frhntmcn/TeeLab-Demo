@@ -19,7 +19,7 @@ describe('mergeCartItem', () => {
     expect(mergeCartItem([base], black)).toHaveLength(2);
     expect(updateCartQuantity([base], base.id, 0)).toEqual([]);
     expect(updateCartQuantity([base], base.id, -3)).toEqual([]);
-    expect(updateCartQuantity([base], base.id, 99)[0].quantity).toBe(25);
+    expect(updateCartQuantity([base], base.id, 99)[0].quantity).toBe(99);
   });
 
   it('serializes valid carts and safely rejects corrupted or incomplete storage', () => {
@@ -29,7 +29,7 @@ describe('mergeCartItem', () => {
     expect(deserializeCart(JSON.stringify([{ id: 'missing-fields' }]))).toEqual([]);
     expect(deserializeCart(JSON.stringify([{ ...item('d-fractional'), quantity: 0.5 }]))).toEqual([]);
     expect(deserializeCart(JSON.stringify([{ ...item('d-zero'), quantity: 0 }, { ...item('d-nan'), quantity: null }]))).toEqual([]);
-    expect(deserializeCart(JSON.stringify([{ ...item('d-large'), quantity: 99 }]))[0].quantity).toBe(25);
+    expect(deserializeCart(JSON.stringify([{ ...item('d-large'), quantity: 99 }]))[0].quantity).toBe(99);
     expect(deserializeCart(JSON.stringify([{ ...item('d-print'), printSides: { front: 'yes', back: false } }]))[0].printSides).toBeUndefined();
     expect(deserializeCart(JSON.stringify([{ ...item('d-null-print'), printSides: null }]))[0].printSides).toBeUndefined();
   });
@@ -50,5 +50,14 @@ describe('mergeCartItem', () => {
     const second = { ...first, id: 'd-two', designHash: 'd-two', fit: 'oversize' as const };
     expect(mergeCartItem([first], second)).toHaveLength(2);
     expect(cartSubtotal([first, second])).toBe(4324);
+  });
+
+  it('applies one volume discount across sizes in a Studio design group', () => {
+    const small = { ...item('d-bundle', 3), id: 'bundle-s', size: 'S' as const, designGroupId: 'bundle', unitPrice: 465, printSides: { front: true, back: false } };
+    const medium = { ...small, id: 'bundle-m', size: 'M' as const, quantity: 2 };
+    const cart = mergeCartItem(mergeCartItem([], small), medium);
+    expect(cart).toHaveLength(2);
+    expect(cartSubtotal(cart)).toBe(2162);
+    expect(cartSubtotal(updateCartQuantity(cart, 'bundle-m', 1))).toBe(1860);
   });
 });

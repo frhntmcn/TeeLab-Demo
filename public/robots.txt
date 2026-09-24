@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /yonetim
+Disallow: /hesabim
+Disallow: /sepet
+Disallow: /studio
+
+Sitemap: https://maymoon.com.tr/sitemap.xml
