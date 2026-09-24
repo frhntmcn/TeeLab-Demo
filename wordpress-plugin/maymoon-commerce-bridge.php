@@ -12,6 +12,10 @@ defined( 'ABSPATH' ) || exit;
 
 final class Maymoon_Commerce_Bridge {
 	const REST_NAMESPACE = 'maymoon/v1';
+	const MAX_QUOTE_LINES = 50;
+	const MAX_QUOTE_BODY_BYTES = 65536;
+	const MAX_SAVED_DESIGN_BYTES = 10485760;
+	const REGISTRATION_ATTEMPTS_PER_HOUR = 10;
 
 	public function __construct() {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
@@ -113,6 +117,10 @@ final class Maymoon_Commerce_Bridge {
 		if ( '' === $name || ! is_email( $email ) || strlen( $password ) < 10 ) {
 			return new WP_Error( 'maymoon_invalid_registration', 'Ad soyad, geçerli e-posta ve en az 10 karakterlik şifre gerekli.', array( 'status' => 400 ) );
 		}
+		$registration_limit = $this->limit_registration_attempts();
+		if ( is_wp_error( $registration_limit ) ) {
+			return $registration_limit;
+		}
 		if ( email_exists( $email ) ) {
 			return new WP_Error( 'maymoon_existing_account', 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı deneyin.', array( 'status' => 409 ) );
 		}
@@ -130,6 +138,20 @@ final class Maymoon_Commerce_Bridge {
 		wp_set_current_user( $user_id );
 		wp_set_auth_cookie( $user_id, true, is_ssl() );
 		return rest_ensure_response( $this->customer_session_payload() );
+	}
+
+	private function limit_registration_attempts() {
+		$remote_address = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+		if ( ! filter_var( $remote_address, FILTER_VALIDATE_IP ) ) {
+			return new WP_Error( 'maymoon_registration_unavailable', 'Hesap oluşturma şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.', array( 'status' => 503 ) );
+		}
+		$key = 'maymoon_register_' . hash( 'sha256', $remote_address );
+		$attempts = (int) get_transient( $key );
+		if ( $attempts >= self::REGISTRATION_ATTEMPTS_PER_HOUR ) {
+			return new WP_Error( 'maymoon_registration_limited', 'Çok fazla kayıt denemesi yapıldı. Lütfen bir saat sonra tekrar deneyin.', array( 'status' => 429 ) );
+		}
+		set_transient( $key, $attempts + 1, HOUR_IN_SECONDS );
+		return true;
 	}
 
 	public function login_customer( WP_REST_Request $request ) {
@@ -243,7 +265,8 @@ final class Maymoon_Commerce_Bridge {
 		if ( '' === $name || ! is_array( $design ) || empty( $design['documents']['front']['objects'] ) && empty( $design['documents']['back']['objects'] ) ) {
 			return new WP_Error( 'maymoon_invalid_design', 'Tasarım adı ve en az bir baskı yüzü gerekli.', array( 'status' => 400 ) );
 		}
-		if ( strlen( (string) wp_json_encode( $design ) ) > 2097152 ) {
+		$encoded_design = wp_json_encode( $design );
+		if ( false === $encoded_design || strlen( $encoded_design ) > 2097152 ) {
 			return new WP_Error( 'maymoon_design_too_large', 'Tasarım dosyası 2 MB sınırını aşıyor. Görsel boyutlarını küçültüp tekrar deneyin.', array( 'status' => 413 ) );
 		}
 		foreach ( array( 'front', 'back' ) as $side ) {
@@ -263,6 +286,10 @@ final class Maymoon_Commerce_Bridge {
 			'design' => $design,
 		);
 		array_unshift( $records, $record );
+		$encoded_records = wp_json_encode( $records );
+		if ( false === $encoded_records || strlen( $encoded_records ) > self::MAX_SAVED_DESIGN_BYTES ) {
+			return new WP_Error( 'maymoon_design_storage_limit', 'Kayıtlı tasarımlarınız için ayrılan alan doldu. Yeni tasarım kaydetmeden önce kullanmadığınız tasarımları silin.', array( 'status' => 413 ) );
+		}
 		update_user_meta( $user_id, '_maymoon_saved_designs', $records );
 		nocache_headers();
 		return rest_ensure_response( $record );
@@ -333,6 +360,10 @@ final class Maymoon_Commerce_Bridge {
 		$items = $request->get_param( 'items' );
 		if ( ! is_array( $items ) || empty( $items ) ) {
 			return new WP_Error( 'maymoon_empty_cart', 'Sepetiniz boş.', array( 'status' => 400 ) );
+		}
+		$encoded_items = wp_json_encode( $items );
+		if ( false === $encoded_items || strlen( $encoded_items ) > self::MAX_QUOTE_BODY_BYTES || count( $items ) > self::MAX_QUOTE_LINES ) {
+			return new WP_Error( 'maymoon_cart_too_large', 'Sepette en fazla 50 satır olabilir. Sepetinizi küçültüp tekrar deneyin.', array( 'status' => 413 ) );
 		}
 
 		$quoted_items = array();
