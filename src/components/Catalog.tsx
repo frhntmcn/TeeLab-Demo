@@ -8,12 +8,15 @@ import { fetchWooCommerceProductOverrides, getWooCommerceProductOverride } from 
 import { filterAndSortCatalog, type CatalogSort } from '../lib/catalog';
 import type { Product } from '../types';
 import { ShirtVisual } from './Artwork';
+import heroConcept from '../assets/hero/maymoon-lifestyle-concept.png';
+import heroCity from '../assets/hero/maymoon-lifestyle-city.png';
+import heroCreative from '../assets/hero/maymoon-lifestyle-creative.png';
 
 export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; onProduct: (product: Product) => void }) {
   const banners = [
-    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', color: 'black' as const, artwork: 'orbit' as const, name: 'Gece Yörüngesi', meta: `Ön ve arka yüzüyle tasarlanmış ${brand.name} koleksiyon görünümü.`, label: 'Siyah tişört üzerinde Gece Yörüngesi tasarımı.' },
-    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', color: 'beige' as const, artwork: 'anatolia' as const, name: 'Anadolu Form', meta: `${brand.name} koleksiyonundaki ön ve arka baskı görünümü.`, label: 'Bej tişört üzerinde Anadolu Form tasarımı.' },
-    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', color: 'white' as const, artwork: 'typography' as const, name: 'İyi Fikir', meta: `${brand.name} Stüdyo için üretim öncesi baskı yerleşimi örneği.`, label: 'Beyaz tişört üzerinde İyi Fikir tasarımı.' },
+    { title: <>Fikrini<br />giy.</>, copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur.', name: 'Fikrini giy', meta: 'Bir fikir, günlük hayatın içinde yeni bir görünüm.', image: heroConcept, detail: heroCity, label: 'Şehirde, baskılı tişört giyen iki kişinin temsili görseli.' },
+    { title: <>Önü de senin,<br />arkası da.</>, copy: 'Her yüzü ayrı tasarla, tişörtünü tamamen kendine ait yap.', name: 'İki yüz, tek fikir', meta: 'Ön ve arka yüzü kendi fikrine göre düzenle.', image: heroCity, detail: heroCreative, label: 'Şehirde baskılı tişört giyen bir kişinin temsili görseli.' },
+    { title: <>Tasarla.<br />Önizle. Giy.</>, copy: 'Baskı alanını ve görsel kalitesini kontrol ederek ilerle.', name: 'Maymoon Stüdyo', meta: 'Tasarlarken her ayrıntıyı önizle.', image: heroCreative, detail: heroConcept, label: 'Yaratıcı bir atölyede baskılı tişört giyen kişilerin temsili görseli.' },
   ];
   const [activeBanner, setActiveBanner] = useState(0);
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -80,8 +83,10 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           </div>
         </div>
         <div className="home-hero__visual" key={activeBanner}>
-          <ShirtVisual color={banner.color} artwork={banner.artwork} label={banner.label} />
-          <div className="home-hero__meta"><span>{brand.name.toUpperCase()} KOLEKSİYON</span><b>{banner.name}</b><small>{banner.meta}</small></div>
+          <div className="home-hero__backplate" aria-hidden="true" />
+          <div className="home-hero__photo"><img src={banner.image} alt={banner.label} fetchPriority={activeBanner === 0 ? 'high' : undefined} /><span className="home-hero__image-label">TEMSİLİ GÖRSEL</span></div>
+          <div className="home-hero__detail" aria-hidden="true"><img src={banner.detail} alt="" /></div>
+          <div className="home-hero__meta"><span>{brand.name.toUpperCase()} / YAŞAM KONSEPTİ</span><b>{banner.name}</b><small>{banner.meta}</small></div>
         </div>
       </section>
 
