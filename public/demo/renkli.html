@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maymoon — Canlı kampanya demosu</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="view-transition" content="same-origin">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #111827;
+      --paper-stock: #F5F3EE;
+      --clay: #A85D3C;
+      --quiet: #6B6D69;
+      --rule: #DEDAD2;
+      --accent: #7C3AED;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; font-family: 'Inter', sans-serif; background: var(--ink); color: white; }
+    button, a { font: inherit; }
+    button:focus-visible, a:focus-visible { outline: 3px solid var(--paper-stock); outline-offset: 4px; }
+
+    @view-transition { navigation: auto; }
+    ::view-transition-old(root), ::view-transition-new(root) {
+      animation-duration: 0.4s;
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .campaign-shell {
+      min-height: 100vh;
+      background: var(--accent);
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .campaign-header {
+      height: 76px;
+      padding: 0 clamp(24px, 5vw, 76px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--accent);
+      border-bottom: 1px solid rgba(245, 243, 238, 0.28);
+      position: relative;
+      z-index: 40;
+      view-transition-name: header;
+    }
+
+    .brand-link {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: white;
+      text-decoration: none;
+      font-family: 'Manrope', sans-serif;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-link img {
+      width: 38px;
+      height: 38px;
+      padding: 4px;
+      background: var(--paper-stock);
+      border-radius: 10px;
+    }
+
+    .campaign-nav { display: flex; align-items: center; gap: 28px; }
+    .campaign-nav a {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      color: white;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+      border-bottom: 1px solid transparent;
+      transition: border-color 200ms ease, transform 200ms ease;
+    }
+    .campaign-nav a:hover { border-color: white; transform: translateY(-2px); }
+    .campaign-nav .nav-studio {
+      padding: 0 16px;
+      border: 1px solid white;
+      border-radius: 10px;
+    }
+    .campaign-nav .nav-studio:hover { background: white; color: var(--ink); }
+
+    .campaign-main {
+      min-height: calc(100vh - 76px);
+      display: grid;
+      grid-template-rows: minmax(680px, 1fr) auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-stage {
+      width: min(1600px, 100%);
+      margin: 0 auto;
+      padding: clamp(44px, 5vw, 70px) clamp(24px, 5vw, 76px) 54px;
+      display: grid;
+      grid-template-columns: minmax(430px, 0.86fr) minmax(560px, 1.14fr);
+      gap: clamp(38px, 5vw, 80px);
+      align-items: center;
+      position: relative;
+    }
+
+    .hero-copy { position: relative; z-index: 20; max-width: 670px; }
+    .editorial-index {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .editorial-index::before { content: ''; width: 28px; height: 2px; background: var(--clay); }
+
+    .slide-status {
+      width: max-content;
+      margin: 24px 0 18px;
+      padding: 8px 11px;
+      background: var(--clay);
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .hero-copy h1 {
+      margin: 0;
+      color: white;
+      font-family: 'Manrope', sans-serif;
+      font-size: clamp(72px, 8.2vw, 126px);
+      font-weight: 800;
+      line-height: 0.94;
+      letter-spacing: -0.075em;
+      text-transform: uppercase;
+    }
+    .hero-copy h1 span { display: block; margin-left: clamp(30px, 4vw, 68px); }
+
+    .hero-copy > p {
+      max-width: 510px;
+      margin: 34px 0 0;
+      color: var(--paper-stock);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 30px; }
+    .primary-cta, .secondary-cta {
+      min-height: 50px;
+      padding: 0 22px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1), background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+    }
+    .primary-cta { background: white; color: var(--ink); box-shadow: 8px 8px 0 var(--clay); }
+    .primary-cta:hover { transform: translate(-3px, -3px); box-shadow: 11px 11px 0 var(--clay); }
+    .primary-cta:hover iconify-icon { transform: translateX(4px); }
+    .primary-cta iconify-icon { transition: transform 200ms ease; }
+    .secondary-cta { color: white; border: 1px solid rgba(255,255,255,0.75); }
+    .secondary-cta:hover { background: var(--ink); border-color: var(--ink); transform: translateY(-2px); }
+
+    .carousel-controls { display: flex; align-items: center; gap: 12px; margin-top: 38px; }
+    .arrow-control {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.6);
+      cursor: pointer;
+      transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+    }
+    .arrow-control:hover { background: white; color: var(--ink); transform: translateY(-2px); }
+
+    .progress-control { display: flex; align-items: center; gap: 8px; }
+    .progress-control button {
+      width: clamp(48px, 4.5vw, 70px);
+      min-height: 44px;
+      padding: 0;
+      background: transparent;
+      color: white;
+      border: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .progress-control small { display: block; margin-bottom: 7px; font-size: 9px; font-weight: 800; opacity: 0.62; }
+    .progress-track { display: block; width: 100%; height: 3px; background: rgba(255,255,255,0.35); overflow: hidden; }
+    .progress-fill { display: block; width: 0; height: 100%; background: var(--clay); transition: width 220ms ease; }
+    .progress-control button.active small { opacity: 1; }
+    .progress-control button.active .progress-fill { width: 100%; }
+
+    .visual-column { min-width: 0; position: relative; z-index: 10; padding: 22px 24px 28px 0; }
+    .photo-backplate {
+      position: absolute;
+      inset: 0 0 0 32px;
+      background: var(--ink);
+      transform: translate(24px, 22px);
+      transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .photo-frame {
+      position: relative;
+      height: clamp(510px, 45vw, 630px);
+      overflow: hidden;
+      background: var(--ink);
+      border: 8px solid var(--paper-stock);
+      box-shadow: 18px 24px 0 var(--clay);
+      transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease;
+    }
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+      transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease;
+    }
+    .visual-column:hover .photo-frame, .visual-column:focus-within .photo-frame { transform: translate(-6px, -7px); box-shadow: 25px 31px 0 var(--clay); }
+    .visual-column:hover .photo-frame img, .visual-column:focus-within .photo-frame img { transform: scale(1.025); }
+    .visual-column:hover .photo-backplate, .visual-column:focus-within .photo-backplate { transform: translate(32px, 30px); }
+
+    .image-number {
+      position: absolute;
+      z-index: 4;
+      top: 24px;
+      left: 24px;
+      padding: 9px 12px;
+      background: var(--accent);
+      color: white;
+      font-family: 'Manrope', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .image-notice {
+      position: absolute;
+      z-index: 4;
+      right: 18px;
+      bottom: 18px;
+      padding: 7px 9px;
+      background: var(--ink);
+      color: white;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .image-caption {
+      position: absolute;
+      z-index: 5;
+      left: -34px;
+      bottom: 54px;
+      width: min(340px, 55%);
+      padding: 16px 18px;
+      background: var(--paper-stock);
+      color: var(--ink);
+      border-left: 5px solid var(--clay);
+      box-shadow: 10px 12px 0 var(--ink);
+    }
+    .image-caption span { color: var(--clay); font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+    .image-caption strong { display: block; margin-top: 5px; font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 800; }
+
+    .graphic-cutout { position: absolute; pointer-events: none; z-index: 0; }
+    .cutout-one { width: 118px; height: 18px; top: 118px; left: -36px; background: var(--clay); transform: rotate(-8deg); }
+    .cutout-two { width: 72px; height: 72px; right: -22px; top: 110px; border: 10px solid var(--paper-stock); transform: rotate(8deg); }
+    .cutout-three { right: 1.5%; bottom: 16px; color: rgba(245,243,238,0.18); font-family: 'Manrope', sans-serif; font-size: 120px; font-weight: 800; line-height: 1; letter-spacing: -0.08em; }
+
+    .editorial-strip {
+      min-height: 112px;
+      padding: 22px clamp(24px, 5vw, 76px);
+      display: grid;
+      grid-template-columns: auto minmax(240px, 1fr) auto;
+      align-items: center;
+      gap: clamp(24px, 4vw, 64px);
+      background: var(--clay);
+      color: white;
+      position: relative;
+      z-index: 20;
+    }
+    .strip-kicker { font-size: 9px; font-weight: 800; letter-spacing: 0.17em; text-transform: uppercase; }
+    .editorial-strip h2 { margin: 5px 0 0; font-family: 'Manrope', sans-serif; font-size: clamp(22px, 2.3vw, 34px); line-height: 1; letter-spacing: -0.04em; }
+    .editorial-strip p { max-width: 560px; margin: 0; font-size: 12px; line-height: 1.6; }
+    .strip-index { font-family: 'Manrope', sans-serif; font-size: 48px; font-weight: 800; line-height: 1; opacity: 0.5; }
+
+    @media (max-width: 1050px) {
+      .hero-stage { grid-template-columns: minmax(330px, 0.8fr) minmax(440px, 1.2fr); gap: 34px; }
+      .hero-copy h1 { font-size: clamp(66px, 9vw, 94px); }
+      .image-caption { left: -18px; }
+    }
+
+    @media (max-width: 760px) {
+      .campaign-shell { overflow: hidden; }
+      .campaign-header { height: 66px; padding: 0 20px; }
+      .campaign-nav a:not(.nav-studio) { display: none; }
+      .campaign-nav { gap: 0; }
+      .campaign-nav .nav-studio { min-height: 44px; padding: 0 12px; font-size: 11px; }
+      .brand-link { font-size: 18px; }
+      .brand-link img { width: 35px; height: 35px; }
+      .campaign-main { min-height: calc(100vh - 66px); grid-template-rows: auto auto; }
+      .hero-stage { padding: 34px 20px 48px; grid-template-columns: 1fr; gap: 50px; }
+      .hero-copy { max-width: none; }
+      .slide-status { margin-top: 18px; margin-bottom: 34px; }
+      .hero-copy h1 { font-size: clamp(67px, 20vw, 88px); line-height: 0.98; }
+      .hero-copy h1 span { margin-left: 18px; }
+      .hero-copy > p { margin-top: 27px; font-size: 15px; }
+      .hero-actions { align-items: stretch; }
+      .primary-cta, .secondary-cta { flex: 1 1 160px; }
+      .carousel-controls { justify-content: space-between; gap: 8px; }
+      .arrow-control { width: 42px; height: 42px; flex: 0 0 auto; }
+      .progress-control { flex: 1; }
+      .progress-control button { width: 100%; }
+      .visual-column { padding: 0 9px 18px 0; }
+      .photo-frame { height: min(122vw, 520px); border-width: 6px; box-shadow: 10px 14px 0 var(--clay); }
+      .photo-backplate { inset: 0 0 0 14px; transform: translate(12px, 12px); }
+      .visual-column:hover .photo-frame, .visual-column:focus-within .photo-frame { transform: none; box-shadow: 10px 14px 0 var(--clay); }
+      .visual-column:hover .photo-frame img, .visual-column:focus-within .photo-frame img { transform: none; }
+      .visual-column:hover .photo-backplate, .visual-column:focus-within .photo-backplate { transform: translate(12px, 12px); }
+      .image-caption { left: 14px; bottom: 28px; width: calc(100% - 48px); }
+      .cutout-one { left: -70px; }
+      .cutout-two, .cutout-three { display: none; }
+      .editorial-strip { padding: 25px 20px; grid-template-columns: 1fr auto; gap: 18px; }
+      .editorial-strip p { grid-column: 1 / -1; }
+      .strip-index { font-size: 38px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      .primary-cta:hover, .secondary-cta:hover, .arrow-control:hover, .campaign-nav a:hover,
+      .visual-column:hover .photo-frame, .visual-column:focus-within .photo-frame,
+      .visual-column:hover .photo-frame img, .visual-column:focus-within .photo-frame img,
+      .visual-column:hover .photo-backplate, .visual-column:focus-within .photo-backplate { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="campaign-shell">
+    <header class="campaign-header">
+      <a href="https://teelab-demo.vercel.app/" id="brand-home-link" class="brand-link" aria-label="Maymoon ana sayfa">
+        <img src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/brand-assets/public-favicon.svg/favicon.svg" alt="Maymoon logo">
+        <span>Maymoon</span>
+      </a>
+      <nav class="campaign-nav" aria-label="Ana navigasyon">
+        <a href="https://teelab-demo.vercel.app/" id="nav-home-link">Ana Sayfa</a>
+        <a href="https://teelab-demo.vercel.app/#koleksiyon" id="nav-collection-link">Koleksiyon</a>
+        <a href="https://teelab-demo.vercel.app/studio" id="nav-studio-link" class="nav-studio">Kendin Tasarla</a>
+      </nav>
+    </header>
+
+    <main id="campaign" class="campaign-main">
+      <section class="hero-stage" aria-roledescription="carousel" aria-label="Maymoon İstanbul yaşam konsepti">
+        <div class="graphic-cutout cutout-one" aria-hidden="true"></div>
+        <div class="graphic-cutout cutout-two" aria-hidden="true"></div>
+        <div class="graphic-cutout cutout-three" aria-hidden="true">MM/26</div>
+
+        <div class="hero-copy">
+          <span class="editorial-index">Maymoon / 2026 — İstanbul</span>
+          <p id="slide-status" class="slide-status" aria-live="polite">01 / 03 · Fikrini giy</p>
+          <h1>Fikrini<span>giy.</span></h1>
+          <p id="slide-copy">Kendi tasarımını ön ve arka yüzüyle oluştur. İstanbul’un ritmini, kendi fikrinle görünür kıl.</p>
+
+          <div class="hero-actions">
+            <a href="https://teelab-demo.vercel.app/studio" id="cta-start-design" class="primary-cta">
+              Kendin Tasarla
+              <iconify-icon icon="lucide:arrow-right" width="18"></iconify-icon>
+            </a>
+            <a href="https://teelab-demo.vercel.app/#koleksiyon" id="cta-view-collection" class="secondary-cta">
+              Koleksiyonu İncele
+              <iconify-icon icon="lucide:arrow-down" width="17"></iconify-icon>
+            </a>
+          </div>
+
+          <div class="carousel-controls" aria-label="Slayt kontrolleri">
+            <button type="button" id="carousel-prev" class="arrow-control" aria-label="Önceki slayt">
+              <iconify-icon icon="lucide:arrow-left" width="18"></iconify-icon>
+            </button>
+            <div class="progress-control">
+              <button type="button" id="carousel-slide-1" class="active" aria-label="1. slayt: Fikrini giy" aria-current="true">
+                <small>01</small><span class="progress-track"><span class="progress-fill"></span></span>
+              </button>
+              <button type="button" id="carousel-slide-2" aria-label="2. slayt: Şehir senin">
+                <small>02</small><span class="progress-track"><span class="progress-fill"></span></span>
+              </button>
+              <button type="button" id="carousel-slide-3" aria-label="3. slayt: Tasarla ve gör">
+                <small>03</small><span class="progress-track"><span class="progress-fill"></span></span>
+              </button>
+            </div>
+            <button type="button" id="carousel-next" class="arrow-control" aria-label="Sonraki slayt">
+              <iconify-icon icon="lucide:arrow-right" width="18"></iconify-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="visual-column" tabindex="0" aria-label="Seçili Maymoon yaşam konsepti görseli">
+          <div class="photo-backplate" aria-hidden="true"></div>
+          <figure class="photo-frame">
+            <img id="hero-image" src="https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/content-assets/maymoon-home-hero-lifestyle-concept/maymoon-lifestyle-concept.png" alt="İstanbul'da Maymoon tişörtleri giyen iki kişi" fetchpriority="high">
+            <span id="image-number" class="image-number">01</span>
+            <span class="image-notice">* Temsili görsel</span>
+          </figure>
+          <div class="image-caption">
+            <span>Maymoon yaşam konsepti</span>
+            <strong id="image-caption-title">İstanbul’da kendi ritmin.</strong>
+          </div>
+        </div>
+      </section>
+
+      <section id="editorial-strip" class="editorial-strip" aria-label="Maymoon editöryel seri">
+        <div>
+          <span class="strip-kicker">Maymoon / Editöryel Seri</span>
+          <h2>Fikir, şehrin içinde.</h2>
+        </div>
+        <p>Ön ve arka yüzü birlikte düşün. Kendi görsel dilini oluştur, tasarımını gerçek ölçülerle önizle.</p>
+        <span class="strip-index" aria-hidden="true">26</span>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const slides = [
+      {
+        name: 'Fikrini giy',
+        copy: 'Kendi tasarımını ön ve arka yüzüyle oluştur. İstanbul’un ritmini, kendi fikrinle görünür kıl.',
+        caption: 'İstanbul’da kendi ritmin.',
+        image: 'https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/content-assets/maymoon-home-hero-lifestyle-concept/maymoon-lifestyle-concept.png',
+        alt: "İstanbul'da Maymoon tişörtleri giyen iki kişi"
+      },
+      {
+        name: 'Şehir senin',
+        copy: 'Gündelik hayatın katmanlarından ilham al. Önü de arkası da sana ait tek bir görünüm tasarla.',
+        caption: 'Şehirle aynı frekansta.',
+        image: 'https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/content-assets/maymoon-home-hero-city/maymoon-lifestyle-city.png',
+        alt: "İstanbul'da baskılı Maymoon tişörtü giyen kişi"
+      },
+      {
+        name: 'Tasarla ve gör',
+        copy: 'Fikrini Stüdyo’ya taşı. Ön ve arka yüzü düzenle, baskı alanını kontrol ederek görünümünü tamamla.',
+        caption: 'Fikirden görünüme.',
+        image: 'https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/088329fa-89df-409a-8409-4025dbb30653/content-assets/maymoon-home-hero-creative/maymoon-lifestyle-creative.png',
+        alt: "İstanbul manzaralı yaratıcı atölyede Maymoon tasarım süreci"
+      }
+    ];
+
+    let activeSlide = 0;
+    const image = document.getElementById('hero-image');
+    const status = document.getElementById('slide-status');
+    const copy = document.getElementById('slide-copy');
+    const caption = document.getElementById('image-caption-title');
+    const imageNumber = document.getElementById('image-number');
+    const progressButtons = slides.map((_, index) => document.getElementById(`carousel-slide-${index + 1}`));
+
+    function showSlide(index) {
+      activeSlide = (index + slides.length) % slides.length;
+      const slide = slides[activeSlide];
+      image.style.opacity = '0';
+
+      window.setTimeout(() => {
+        image.src = slide.image;
+        image.alt = slide.alt;
+        image.style.opacity = '1';
+      }, 140);
+
+      status.textContent = `0${activeSlide + 1} / 03 · ${slide.name}`;
+      copy.textContent = slide.copy;
+      caption.textContent = slide.caption;
+      imageNumber.textContent = `0${activeSlide + 1}`;
+
+      progressButtons.forEach((button, indexValue) => {
+        const selected = indexValue === activeSlide;
+        button.classList.toggle('active', selected);
+        if (selected) button.setAttribute('aria-current', 'true');
+        else button.removeAttribute('aria-current');
+      });
+    }
+
+    document.getElementById('carousel-prev').addEventListener('click', () => showSlide(activeSlide - 1));
+    document.getElementById('carousel-next').addEventListener('click', () => showSlide(activeSlide + 1));
+    progressButtons.forEach((button, index) => button.addEventListener('click', () => showSlide(index)));
+  </script>
+</body>
+</html>
