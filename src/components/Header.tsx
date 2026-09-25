@@ -29,7 +29,7 @@ export function Header({ cartCount }: { cartCount: number }) {
   const collectionActive = location.pathname === '/' && location.hash === '#koleksiyon';
 
   return (
-    <header className="site-header">
+    <header className={`site-header${location.pathname === '/' ? ' site-header--cinematic' : ''}`}>
       <Link className="logo-button" to="/" aria-label={`${brand.name} ana sayfa`}><Logo /></Link>
       <nav className="desktop-nav" aria-label="Ana menü">
         <NavLink to="/" end>Ana Sayfa</NavLink>

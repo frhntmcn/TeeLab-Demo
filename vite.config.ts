@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const fontPackages = ['anton', 'bebas-neue', 'caveat', 'montserrat', 'oswald', 'playfair-display'];
+const fontPackages = ['anton', 'bebas-neue', 'caveat', 'manrope', 'montserrat', 'oswald', 'playfair-display'];
 
 export default defineConfig(({ mode }) => {
   const isStudioDeployment = mode === 'studio';

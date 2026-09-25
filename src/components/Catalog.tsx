@@ -67,8 +67,8 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
     <main className="catalog-page">
       <section className="home-hero" aria-roledescription="carousel" aria-label={`${brand.name} tanıtımı`}>
         <div className="home-hero__copy">
-          <span className="editorial-index">{brand.name.toUpperCase()} / 2026 — {brand.city.toUpperCase()}</span>
-          <p className="hero-slide-status" aria-live="polite">{activeBanner + 1} / {banners.length} · {banner.name}</p>
+          <span className="editorial-index">{brand.name.toUpperCase()} / {brand.city.toUpperCase()}</span>
+          <p className="hero-slide-status" aria-live="polite">{String(activeBanner + 1).padStart(2, '0')} / {String(banners.length).padStart(2, '0')} · YAŞAM KONSEPTİ</p>
           <h1>{banner.title}</h1>
           <p>{banner.copy}</p>
           <div className="home-hero__actions">
@@ -83,12 +83,13 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
           </div>
         </div>
         <div className="home-hero__visual" key={activeBanner}>
-          <div className="home-hero__backplate" aria-hidden="true" />
           <div className="home-hero__photo"><img src={banner.image} alt={banner.label} fetchPriority={activeBanner === 0 ? 'high' : undefined} /><span className="home-hero__image-label">TEMSİLİ GÖRSEL</span></div>
-          <div className="home-hero__detail" aria-hidden="true"><img src={banner.detail} alt="" /></div>
+          <div className="home-hero__detail" aria-hidden="true"><img src={banner.detail} alt="" /><strong>{banner.name}</strong></div>
           <div className="home-hero__meta"><span>{brand.name.toUpperCase()} / YAŞAM KONSEPTİ</span><b>{banner.name}</b><small>{banner.meta}</small></div>
         </div>
       </section>
+
+      <div className="cinematic-ticker" aria-label="Ön yüz, arka yüz, senin fikrin"><div aria-hidden="true">ÖN YÜZ <span>✦</span> ARKA YÜZ <span>✦</span> SENİN FİKRİN <span>✦</span> MAYMOON <span>✦</span> ÖN YÜZ <span>✦</span> ARKA YÜZ <span>✦</span> SENİN FİKRİN <span>✦</span></div></div>
 
       <section className="how-it-works" aria-labelledby="how-it-works-title">
         <header><span className="editorial-index">NASIL ÇALIŞIR</span><h2 id="how-it-works-title">Fikrinden tişörtüne.</h2></header>
@@ -102,6 +103,11 @@ export function Catalog({ onCustomize, onProduct }: { onCustomize: () => void; o
 
       <section className="trust-strip" aria-label={`${brand.name} özellikleri`}>
         <span><Check /> Ön / arka baskı</span><span><Check /> 30 × 40 cm baskı alanı</span><span><Check /> 300 PPI kalite kontrolü</span><span><Check /> Taslağını kaydet</span>
+      </section>
+
+      <section className="cinematic-feature" aria-labelledby="cinematic-feature-title">
+        <div className="cinematic-feature__visual"><img src={heroCreative} alt="Tasarım üzerine çalışan iki kişinin temsili görseli" loading="lazy" /><span>TEMSİLİ GÖRSEL / MAYMOON STÜDYO</span></div>
+        <div className="cinematic-feature__copy"><span className="editorial-index">TASARIMIN AYRINTILARI</span><h2 id="cinematic-feature-title">Sadece bir baskı değil.<br /><em>Senin kompozisyonun.</em></h2><p>Yazını, görselini ve renklerini stüdyoda bir araya getir. Ön ve arka yüzü ayrı ayrı düzenle; son adımda baskı alanını, beden adetlerini ve önizlemeyi kontrol et.</p><ul><li><b>01</b><span>Ön ve arka yüz için ayrı tuval</span></li><li><b>02</b><span>Metin, görsel ve katman düzenleme</span></li><li><b>03</b><span>Sepete eklemeden önce kalite kontrolü</span></li></ul><button className="button button--ink" onClick={onCustomize}>Stüdyoda dene <ArrowRight size={17} /></button></div>
       </section>
 
       <section className="editorial-collection" id="koleksiyon">
